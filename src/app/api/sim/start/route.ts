@@ -4,8 +4,9 @@ import { getOrCreateShift } from '@/lib/simulator/shift';
 
 const StartShiftSchema = z.object({
   shiftId: z.string().optional(),
-  durationMin: z.number().int().min(5).max(480).default(60),
+  durationMin: z.number().int().min(5).max(1440).default(480),
   seed: z.number().int().default(42),
+  tickSpeedMs: z.number().int().min(100).max(10000).default(1000),
 });
 
 export async function POST(request: Request) {
@@ -18,7 +19,12 @@ export async function POST(request: Request) {
     }
 
     const shiftId = parsed.data.shiftId || `shift_${Date.now()}`;
-    const engine = getOrCreateShift(shiftId, parsed.data.durationMin, parsed.data.seed);
+    const engine = getOrCreateShift(
+      shiftId,
+      parsed.data.durationMin,
+      parsed.data.seed,
+      parsed.data.tickSpeedMs
+    );
 
     await engine.start();
 

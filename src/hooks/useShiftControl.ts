@@ -7,14 +7,18 @@ export function useShiftControl() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const startShift = async (durationMin: number = 60, seed: number = 42): Promise<{ shiftId: string; state: ShiftState } | null> => {
+  const startShift = async (
+    durationMin: number = 480,
+    seed: number = 42,
+    tickSpeedMs: number = 1000
+  ): Promise<{ shiftId: string; state: ShiftState } | null> => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch('/api/sim/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ durationMin, seed }),
+        body: JSON.stringify({ durationMin, seed, tickSpeedMs }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to start shift');
