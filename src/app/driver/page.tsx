@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import TopNavbar from '@/components/TopNavbar';
 import RouteNetworkMap from '@/components/dashboard/RouteNetworkMap';
 import VehicleDonutChart from '@/components/dashboard/VehicleDonutChart';
 import { useShiftControl } from '@/hooks/useShiftControl';
 import { useShiftStream } from '@/hooks/useShiftStream';
-import Link from 'next/link';
 
 export default function DriverDashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,10 +44,10 @@ export default function DriverDashboardPage() {
 
   // Al finalizar la simulación por llegar al límite de ticks, limpiar overrides
   useEffect(() => {
-    if (shiftState && totalTicks > 0 && currentTick >= totalTicks) {
+    if (shiftState && shiftState.totalTicks > 0 && shiftState.currentTick >= shiftState.totalTicks) {
       setManualOverrides({});
     }
-  }, [currentTick, totalTicks, shiftState]);
+  }, [shiftState?.currentTick, shiftState?.totalTicks]);
 
   // Toggle live simulation
   const handleToggleSimulation = async () => {
@@ -89,10 +89,18 @@ export default function DriverDashboardPage() {
     activeRoute: [],
   };
 
+  // Determinar estado de cada repartidor:
+  // 1. En un principio: Todos en "Disponible"
+  // 2. Durante la simulación:
+  //    - Si el repartidor está aceptando órdenes (status === 'delivering') -> se cambia a "En Ruta"
+  //    - A MENOS QUE: el repartidor no esté aceptando órdenes (status === 'idle') -> se queda en "Disponible"
+  //    - Y cuando vuelva a aceptar órdenes -> regresa a "En Ruta"
+  // 3. Cuando termine la simulación (!isSimulationRunning): Todos regresan a "Disponible"
   const resolveCourierStatus = (
     courierId: string,
-    courier: { status?: string; activeRoute?: any[] }
+    courier: { status?: 'idle' | 'delivering' | 'rerouting'; activeRoute?: any[] }
   ) => {
+    // Si el usuario aplicó un override manual para prueba o demo
     if (manualOverrides[courierId]) {
       const overrideType = manualOverrides[courierId];
       return {
@@ -101,18 +109,18 @@ export default function DriverDashboardPage() {
       };
     }
 
+    // Al inicio O cuando termine la simulación: Todos regresan a "Disponible"
     if (!isSimulationRunning) {
       return { status: 'Disponible', statusType: 'disponible' as const };
     }
 
-    if (
-      courier.status === 'delivering' ||
-      courier.status === 'moving_to_pickup' ||
-      courier.status === 'waiting_at_pickup'
-    ) {
+    // Durante la simulación en curso:
+    // Si está aceptando órdenes y entregando -> "En Ruta"
+    if (courier.status === 'delivering') {
       return { status: 'En Ruta', statusType: 'en_ruta' as const };
     }
 
+    // Si no está aceptando órdenes (idle) -> "Disponible"
     return { status: 'Disponible', statusType: 'disponible' as const };
   };
 
@@ -133,7 +141,7 @@ export default function DriverDashboardPage() {
     {
       id: 'REP-4091',
       name: 'Agent A — The Economist',
-      zone: 'Centro / Macroplaza',
+      zone: 'Norte Centro',
       vehicle: 'Moto',
       deliveriesToday: agentA.completedOrders ?? 0,
       status: statusA.status,
@@ -142,7 +150,7 @@ export default function DriverDashboardPage() {
     {
       id: 'REP-2104',
       name: 'Agent B — The Hustler',
-      zone: 'Centrito San Pedro',
+      zone: 'San Isidro',
       vehicle: 'Moto',
       deliveriesToday: agentB.completedOrders ?? 0,
       status: statusB.status,
@@ -151,7 +159,7 @@ export default function DriverDashboardPage() {
     {
       id: 'REP-3301',
       name: 'Traditional App Baseline',
-      zone: 'Tec / Garza Sada',
+      zone: 'Surco',
       vehicle: 'Moto',
       deliveriesToday: baseline.completedOrders ?? 0,
       status: statusBase.status,
@@ -159,6 +167,7 @@ export default function DriverDashboardPage() {
     },
   ];
 
+  // Total funcional de pedidos entregados en el día (empieza en 0)
   const totalDeliveredToday = driversList.reduce((sum, d) => sum + d.deliveriesToday, 0);
   const deliveryGrowth = totalDeliveredToday === 0
     ? '+0.0%'
@@ -171,51 +180,37 @@ export default function DriverDashboardPage() {
       d.zone.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Live or fallback Recent Orders Data
-  const recentOrders =
-    shiftState && shiftState.newOrders && shiftState.newOrders.length > 0
-      ? shiftState.newOrders.slice(0, 4).map((ord) => ({
-          id: (ord.id || ord.order_id).substring(0, 10).toUpperCase(),
-          destination: `${ord.dropoff.zone} (${ord.food_type || 'comida'})`,
-          assignedTime: `${shiftState.traffic?.formattedTime || '18:30'}`,
-          courier:
-            shiftState.decisions?.agent_b?.accepted?.includes(ord.id || ord.order_id)
-              ? 'Agent B'
-              : shiftState.decisions?.agent_a?.accepted?.includes(ord.id || ord.order_id)
-                ? 'Agent A'
-                : 'En espera',
-          amount: `$${ord.total_pay.toFixed(2)} MXN`,
-        }))
-      : [
-          {
-            id: 'ORD-2391',
-            destination: 'Centro Monterrey (snack)',
-            assignedTime: '18:15',
-            courier: 'Agent B',
-            amount: '$42.50 MXN',
-          },
-          {
-            id: 'ORD-9910',
-            destination: 'San Pedro / Calzada (fast_food)',
-            assignedTime: '18:19',
-            courier: 'Agent A',
-            amount: '$58.00 MXN',
-          },
-          {
-            id: 'ORD-4491',
-            destination: 'Valle Oriente (buffet_gourmet)',
-            assignedTime: '18:24',
-            courier: 'En espera',
-            amount: '$95.20 MXN',
-          },
-          {
-            id: 'ORD-1049',
-            destination: 'Tec / Garza Sada (groceries)',
-            assignedTime: '18:28',
-            courier: 'Baseline',
-            amount: '$48.90 MXN',
-          },
-        ];
+  // Recent Orders Data
+  const recentOrders = [
+    {
+      id: 'ORD-2391',
+      destination: 'Av. Javier Prado Este 2401',
+      assignedTime: '14:32',
+      courier: 'Carlos Mendoza',
+      amount: '$24.50',
+    },
+    {
+      id: 'ORD-9910',
+      destination: 'Calle Las Camelias 432, San Isidro',
+      assignedTime: '14:35',
+      courier: 'Sofía Altamirano',
+      amount: '$18.00',
+    },
+    {
+      id: 'ORD-4491',
+      destination: 'Av. Benavides 1840, Miraflores',
+      assignedTime: '14:41',
+      courier: 'Mateo Ruiz',
+      amount: '$45.20',
+    },
+    {
+      id: 'ORD-1049',
+      destination: 'Jr. Centenario 105, Barranco',
+      assignedTime: '14:48',
+      courier: 'Sin Asignar',
+      amount: '$12.90',
+    },
+  ];
 
   const handleExportReport = () => {
     const reportData = {
@@ -274,130 +269,236 @@ export default function DriverDashboardPage() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-[#09090B] dark:text-zinc-100">
-              Panel de Repartidores & Flota (IRL Monterrey)
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#09090B] dark:text-zinc-100 tracking-tight">
+              Control de Repartidores
             </h1>
-            <p className="text-xs text-[#71717A] dark:text-zinc-400">
-              Supervisión operativa de couriers, estado en ruta y órdenes en curso.
+            <p className="text-xs text-[#71717A] dark:text-zinc-400 mt-1">
+              Monitoreo operativo y despacho de flota en tiempo real.
             </p>
           </div>
 
-          {/* Header Action Buttons */}
-          <div className="flex items-center gap-2.5">
-            <Link
-              href="/"
-              className="px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 rounded-md font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition shadow-sm"
-            >
-              ← Simulador Split-Screen
-            </Link>
+          {/* Status Badge */}
+          <div className="flex items-center gap-3">
+            <div className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 text-[11px] font-bold font-mono tracking-wider text-[#09090B] dark:text-zinc-100 flex items-center gap-2 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-[#09090B] dark:bg-emerald-400 animate-pulse" />
+              <span>SISTEMA ACTIVO</span>
+            </div>
 
+            {/* Quick Simulation Trigger button */}
             <button
-              type="button"
-              disabled={loading}
               onClick={handleToggleSimulation}
-              className={`px-3.5 py-1.5 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-sm ${
-                isSimulationRunning
-                  ? 'bg-rose-600 hover:bg-rose-500 text-white'
-                  : 'bg-[#09090B] dark:bg-zinc-100 text-white dark:text-zinc-900 hover:opacity-90'
-              }`}
+              disabled={loading}
+              className="text-xs px-3 py-1.5 bg-[#09090B] dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-md font-semibold hover:opacity-85 transition"
             >
-              <span>{isSimulationRunning ? '⏹' : '▶'}</span>
-              <span>{loading ? 'Procesando...' : isSimulationRunning ? 'Detener Turno' : 'Iniciar Turno'}</span>
+              {loading
+                ? 'Cargando...'
+                : isSimulationRunning
+                ? `⏹ Detener Turno (Tick ${shiftState?.currentTick || 0})`
+                : '▶ Simular Flota'}
             </button>
           </div>
         </div>
 
-        {/* 4 Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Repartidores Activos */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm">
+        {/* Top 4 KPI Cards Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* KPI 1: Entregas Hoy (Funcional iniciando en 0) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 flex flex-col justify-between shadow-sm h-28">
             <div className="flex justify-between items-start">
-              <span className="text-xs font-medium text-[#71717A] dark:text-zinc-400">
-                Repartidores Activos
+              <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
+                Entregas Hoy
               </span>
-              <span className="text-xs text-[#71717A]">👥</span>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-[#09090B] dark:text-zinc-100">
-                3
-              </span>
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                100% flota
-              </span>
-            </div>
-          </div>
-
-          {/* Card 2: En Ruta */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-medium text-[#71717A] dark:text-zinc-400">
-                En Ruta
-              </span>
-              <span className="text-xs text-[#71717A]">🛵</span>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-[#09090B] dark:text-zinc-100">
-                {driversList.filter((d) => d.statusType === 'en_ruta').length}
-              </span>
-              <span className="text-xs text-[#71717A] dark:text-zinc-400">
-                de 3 couriers
-              </span>
-            </div>
-          </div>
-
-          {/* Card 3: Disponibles */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-medium text-[#71717A] dark:text-zinc-400">
-                Disponibles
-              </span>
-              <span className="text-xs text-[#71717A]">⏳</span>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-[#09090B] dark:text-zinc-100">
-                {driversList.filter((d) => d.statusType === 'disponible').length}
-              </span>
-              <span className="text-xs text-[#71717A] dark:text-zinc-400">
-                en espera
-              </span>
-            </div>
-          </div>
-
-          {/* Card 4: Entregas (Hoy) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm">
-            <div className="flex justify-between items-start">
-              <span className="text-xs font-medium text-[#71717A] dark:text-zinc-400">
-                Entregas (Hoy)
-              </span>
-              <span className="text-xs text-[#71717A]">📦</span>
-            </div>
-            <div className="mt-2 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-[#09090B] dark:text-zinc-100">
-                {totalDeliveredToday}
-              </span>
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              <span className="text-[11px] font-mono font-bold text-[#09090B] dark:text-zinc-200">
                 {deliveryGrowth}
               </span>
+            </div>
+            <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+              {totalDeliveredToday}
+            </div>
+          </div>
+
+          {/* KPI 2 */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 flex flex-col justify-between shadow-sm h-28">
+            <div className="flex justify-between items-start">
+              <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
+                Repartidores Activos
+              </span>
+              <span className="text-[11px] font-mono font-bold text-[#09090B] dark:text-zinc-200">
+                96%
+              </span>
+            </div>
+            <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+              48 / 50
+            </div>
+          </div>
+
+          {/* KPI 3 */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 flex flex-col justify-between shadow-sm h-28">
+            <div className="flex justify-between items-start">
+              <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
+                Tiempo Promedio de Entrega
+              </span>
+              <span className="text-[11px] font-mono font-bold text-[#09090B] dark:text-zinc-200">
+                -1.8 min
+              </span>
+            </div>
+            <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+              22 min
+            </div>
+          </div>
+
+          {/* KPI 4 (Emphasized dark border) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border-2 border-[#09090B] dark:border-zinc-400 p-5 flex flex-col justify-between shadow-sm h-28">
+            <div className="flex justify-between items-start">
+              <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
+                Incidencias Críticas
+              </span>
+              <span className="text-[11px] font-semibold text-[#09090B] dark:text-zinc-200">
+                Atendidas
+              </span>
+            </div>
+            <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+              03
             </div>
           </div>
         </div>
 
-        {/* Main 2-Column Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
-          {/* Left Column: Tables (5 cols on desktop) */}
-          <div className="lg:col-span-5 space-y-6">
-            {/* Table 1: Estado de Repartidores */}
+        {/* 3-Column Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Left Column: Agent Cards (3 cols on desktop) */}
+          <div className="lg:col-span-3 space-y-5">
+            {/* Agent A Card */}
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                  Agent A — The Economist
+                </h3>
+                <span className="text-xs text-[#71717A] dark:text-zinc-400">MXN</span>
+              </div>
+              <div className="text-2xl font-mono font-bold text-[#09090B] dark:text-zinc-100">
+                ${agentA.currentEarnings}
+              </div>
+              <div className="grid grid-cols-2 gap-y-2 text-[11px] pt-1 border-t border-[#E4E4E7] dark:border-zinc-800 text-[#71717A] dark:text-zinc-400">
+                <div>
+                  Distance:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentA.totalKm.toFixed(1)} km
+                  </span>
+                </div>
+                <div>
+                  Orders Done:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentA.completedOrders}
+                  </span>
+                </div>
+                <div>
+                  Skipped:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentA.skippedOrders}
+                  </span>
+                </div>
+                <div>
+                  Avg Rate:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    ${agentA.totalKm > 0 ? (agentA.currentEarnings / agentA.totalKm).toFixed(0) : 0}/km
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Agent B Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                  Agent B — The Hustler
+                </h3>
+                <span className="text-xs text-[#71717A] dark:text-zinc-400">MXN</span>
+              </div>
+              <div className="text-2xl font-mono font-bold text-[#09090B] dark:text-zinc-100">
+                ${agentB.currentEarnings}
+              </div>
+              <div className="grid grid-cols-2 gap-y-2 text-[11px] pt-1 border-t border-[#E4E4E7] dark:border-zinc-800 text-[#71717A] dark:text-zinc-400">
+                <div>
+                  Distance:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentB.totalKm.toFixed(1)} km
+                  </span>
+                </div>
+                <div>
+                  Orders Done:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentB.completedOrders}
+                  </span>
+                </div>
+                <div>
+                  Skipped:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentB.skippedOrders}
+                  </span>
+                </div>
+                <div>
+                  Avg Rate:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    ${agentB.totalKm > 0 ? (agentB.currentEarnings / agentB.totalKm).toFixed(0) : 0}/km
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Baseline Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                  Traditional App Baseline
+                </h3>
+                <span className="text-xs text-[#71717A] dark:text-zinc-400">MXN</span>
+              </div>
+              <div className="text-2xl font-mono font-bold text-[#09090B] dark:text-zinc-100">
+                ${baseline.currentEarnings}
+              </div>
+              <div className="grid grid-cols-2 gap-y-2 text-[11px] pt-1 border-t border-[#E4E4E7] dark:border-zinc-800 text-[#71717A] dark:text-zinc-400">
+                <div>
+                  Distance:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {baseline.totalKm.toFixed(1)} km
+                  </span>
+                </div>
+                <div>
+                  Orders Done:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {baseline.completedOrders}
+                  </span>
+                </div>
+                <div>
+                  Skipped:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {baseline.skippedOrders}
+                  </span>
+                </div>
+                <div>
+                  Avg Rate:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    ${baseline.totalKm > 0 ? (baseline.currentEarnings / baseline.totalKm).toFixed(0) : 0}/km
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Center Column: Tables (6 cols on desktop) */}
+          <div className="lg:col-span-6 space-y-5">
+            {/* Table 1: Repartidores Activos */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
-                    Estado de Repartidores
+                    Repartidores Activos
                   </h3>
                   <p className="text-xs text-[#71717A] dark:text-zinc-400">
-                    Monitoreo en tiempo real de couriers asignados y disponibilidad.
+                    Flota de reparto en operaciones durante el turno actual.
                   </p>
                 </div>
 
+                {/* Filter input */}
                 <div className="relative">
                   <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#71717A]">
                     🔍
@@ -469,10 +570,10 @@ export default function DriverDashboardPage() {
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
               <div>
                 <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
-                  Pedidos Recientes & Despacho (Kaggle Calibrated)
+                  Pedidos Recientes & Despacho
                 </h3>
                 <p className="text-xs text-[#71717A] dark:text-zinc-400">
-                  Últimas órdenes en curso asignadas o en espera de preparación de cocina.
+                  Últimas órdenes en curso asignadas o en espera.
                 </p>
               </div>
 
@@ -527,12 +628,12 @@ export default function DriverDashboardPage() {
                   href="/"
                   className="w-full bg-[#09090B] hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-semibold py-2.5 rounded-lg transition shadow-sm text-center block"
                 >
-                  Ver Mapa de Ruteo OSRM
+                  🗺️ Ver Mapa de Ruteo OSRM en Vivo
                 </Link>
 
                 <button
                   type="button"
-                  onClick={() => alert('Alerta enviada a la flota: Zona Centro con alta congestión')}
+                  onClick={() => alert('Alerta enviada a la flota: Tráfico pesado detectado en Gonzalitos y Morones Prieto.')}
                   className="w-full bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <span>ⓘ</span> Alertar a la Flota
@@ -547,7 +648,7 @@ export default function DriverDashboardPage() {
               </div>
             </div>
 
-            {/* Card 2: Rutas de Reparto Minimalist Map */}
+            {/* Card 2: Rutas de Reparto (Zona Centro) Minimalist Map */}
             <RouteNetworkMap />
 
             {/* Card 3: División de Vehículos Donut Chart */}
