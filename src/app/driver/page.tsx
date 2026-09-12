@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TopNavbar from '@/components/TopNavbar';
 import RouteNetworkMap from '@/components/dashboard/RouteNetworkMap';
 import VehicleDonutChart from '@/components/dashboard/VehicleDonutChart';
@@ -10,11 +10,29 @@ import { useShiftStream } from '@/hooks/useShiftStream';
 export default function DriverDashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeShiftId, setActiveShiftId] = useState<string | null>(null);
+  const [manualOverrides, setManualOverrides] = useState<Record<string, 'en_ruta' | 'disponible'>>({});
   const { startShift, stopShift, loading } = useShiftControl();
   const { state: shiftState } = useShiftStream(activeShiftId);
 
+  // Sync active shift ID from localStorage if exists
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('courier_active_shift_id') : null;
+    if (saved) {
+      setActiveShiftId(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeShiftId) {
+      localStorage.setItem('courier_active_shift_id', activeShiftId);
+    } else {
+      localStorage.removeItem('courier_active_shift_id');
+    }
+  }, [activeShiftId]);
+
   // Toggle live simulation
   const handleToggleSimulation = async () => {
+    setManualOverrides({});
     if (!activeShiftId) {
       const res = await startShift(60, 42);
       if (res) setActiveShiftId(res.shiftId);
@@ -24,12 +42,14 @@ export default function DriverDashboardPage() {
     }
   };
 
-  // Courier agent values (mock defaults or live simulation sync)
+  // Courier agent values (defaults start at 0)
   const agentA = shiftState?.agents.agent_a || {
     currentEarnings: 0,
     totalKm: 0,
     completedOrders: 0,
     skippedOrders: 0,
+    status: 'idle' as const,
+    activeRoute: [],
   };
 
   const agentB = shiftState?.agents.agent_b || {
@@ -37,6 +57,8 @@ export default function DriverDashboardPage() {
     totalKm: 0,
     completedOrders: 0,
     skippedOrders: 0,
+    status: 'idle' as const,
+    activeRoute: [],
   };
 
   const baseline = shiftState?.agents.baseline || {
@@ -44,36 +66,86 @@ export default function DriverDashboardPage() {
     totalKm: 0,
     completedOrders: 0,
     skippedOrders: 0,
+    status: 'idle' as const,
+    activeRoute: [],
   };
 
-  // Drivers Table Data
+  // Estado de simulación activa (corriendo ticks > 0)
+  const isSimulationRunning = Boolean(activeShiftId && shiftState && shiftState.currentTick > 0);
+
+  // Determinar estado de cada repartidor:
+  // 1. En un principio: Todos en "Disponible"
+  // 2. Al empezar simulación: Cambia a "En Ruta"
+  //    A MENOS QUE: el repartidor no esté aceptando órdenes (status === 'idle') -> se queda en "Disponible"
+  //    Y cuando acepte órdenes de nuevo (status === 'delivering') -> regresa a "En Ruta"
+  const resolveCourierStatus = (
+    courierId: string,
+    courier: { status?: 'idle' | 'delivering' | 'rerouting'; activeRoute?: any[] }
+  ) => {
+    // Si el usuario aplicó override manual de prueba
+    if (manualOverrides[courierId]) {
+      const overrideType = manualOverrides[courierId];
+      return {
+        status: overrideType === 'en_ruta' ? 'En Ruta' : 'Disponible',
+        statusType: overrideType,
+      };
+    }
+
+    // Inicialmente todos están en Disponible
+    if (!isSimulationRunning) {
+      return { status: 'Disponible', statusType: 'disponible' as const };
+    }
+
+    // Durante la simulación:
+    // Si está aceptando órdenes (delivering) -> En Ruta
+    if (courier.status === 'delivering') {
+      return { status: 'En Ruta', statusType: 'en_ruta' as const };
+    }
+
+    // Si no está aceptando órdenes (idle) -> Disponible
+    return { status: 'Disponible', statusType: 'disponible' as const };
+  };
+
+  const handleToggleManualStatus = (driverId: string, currentStatusType: 'en_ruta' | 'disponible') => {
+    const nextType = currentStatusType === 'en_ruta' ? 'disponible' : 'en_ruta';
+    setManualOverrides((prev) => ({
+      ...prev,
+      [driverId]: nextType,
+    }));
+  };
+
+  const statusA = resolveCourierStatus('REP-4091', agentA);
+  const statusB = resolveCourierStatus('REP-2104', agentB);
+  const statusBase = resolveCourierStatus('REP-3301', baseline);
+
+  // Drivers Table Data (Entregas inician en 0 para todos)
   const driversList = [
     {
       id: 'REP-4091',
       name: 'Agent A — The Economist',
       zone: 'Norte Centro',
       vehicle: 'Moto',
-      deliveriesToday: agentA.completedOrders > 0 ? 14 + agentA.completedOrders : 14,
-      status: 'En Ruta',
-      statusType: 'en_ruta',
+      deliveriesToday: agentA.completedOrders ?? 0,
+      status: statusA.status,
+      statusType: statusA.statusType,
     },
     {
       id: 'REP-2104',
       name: 'Agent B — The Hustler',
       zone: 'San Isidro',
       vehicle: 'Moto',
-      deliveriesToday: agentB.completedOrders > 0 ? 12 + agentB.completedOrders : 12,
-      status: 'Disponible',
-      statusType: 'disponible',
+      deliveriesToday: agentB.completedOrders ?? 0,
+      status: statusB.status,
+      statusType: statusB.statusType,
     },
     {
       id: 'REP-3301',
       name: 'Traditional App Baseline',
       zone: 'Surco',
       vehicle: 'Moto',
-      deliveriesToday: baseline.completedOrders > 0 ? 19 + baseline.completedOrders : 19,
-      status: 'Disponible',
-      statusType: 'disponible',
+      deliveriesToday: baseline.completedOrders ?? 0,
+      status: statusBase.status,
+      statusType: statusBase.statusType,
     },
   ];
 
@@ -403,15 +475,18 @@ export default function DriverDashboardPage() {
                           {driver.deliveriesToday}
                         </td>
                         <td className="py-3 text-right">
-                          {driver.statusType === 'en_ruta' ? (
-                            <span className="px-2.5 py-1 rounded bg-[#09090B] text-white dark:bg-zinc-100 dark:text-zinc-900 text-[10px] font-semibold">
-                              {driver.status}
-                            </span>
-                          ) : (
-                            <span className="px-2.5 py-1 rounded bg-white dark:bg-zinc-900 border border-[#09090B]/30 dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-[10px] font-semibold">
-                              {driver.status}
-                            </span>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleManualStatus(driver.id, driver.statusType)}
+                            title="Alternar estado (Disponible / En Ruta)"
+                            className={`px-3 py-1 rounded-md text-xs font-semibold transition cursor-pointer ${
+                              driver.statusType === 'en_ruta'
+                                ? 'bg-[#09090B] text-white dark:bg-white dark:text-zinc-950 shadow-sm hover:opacity-90'
+                                : 'bg-white dark:bg-transparent border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 hover:border-zinc-500'
+                            }`}
+                          >
+                            {driver.status}
+                          </button>
                         </td>
                       </tr>
                     ))}

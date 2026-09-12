@@ -169,6 +169,9 @@ export class ShiftEngine {
     courier.currentEarnings += tickPayout;
     courier.totalKm = Number((courier.totalKm + tickDistance).toFixed(2));
     courier.status = acceptedIds.length > 0 ? 'delivering' : 'idle';
+    if (acceptedIds.length === 0) {
+      courier.activeRoute = [];
+    }
   }
 
   private async recordDecisionAsync(decisionA: any, decisionB: any, decisionBase: any) {
