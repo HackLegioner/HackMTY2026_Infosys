@@ -6,6 +6,7 @@ import { getAgentDecision } from '@/lib/agents/agentClient';
 import { connectDB } from '@/lib/db/mongoose';
 import { Shift } from '@/lib/db/ShiftModel';
 import { Decision } from '@/lib/db/DecisionModel';
+import { fetchRoute } from '@/lib/routing/osrmClient';
 
 declare global {
   var __shiftsMap: Map<string, ShiftEngine> | undefined;
@@ -196,10 +197,16 @@ export class ShiftEngine {
     this.state.tick += 1;
     this.state.elapsedMinutes += 1;
 
-    // 1. Check traffic speed based on weather/closures
+    // 1. Check traffic speed based on weather and road disruptions
     const hasRain = this.state.activeEvents.some((e) => e.event_type === 'rain');
-    // Normal city motorcycle speed: 25 km/h -> 0.42 km/min. Rain: 16 km/h -> 0.27 km/min
-    const speedKmPerMin = hasRain ? 16 / 60 : 25 / 60;
+    const hasRoadClosure = this.state.activeEvents.some((e) => e.event_type === 'road_closure');
+    // Normal city motorcycle speed: 25 km/h -> 0.42 km/min.
+    // Rain: 16 km/h. Road closure bottleneck: 18 km/h. Both: 12 km/h.
+    let speedKmh = 25;
+    if (hasRain && hasRoadClosure) speedKmh = 12;
+    else if (hasRain) speedKmh = 16;
+    else if (hasRoadClosure) speedKmh = 18;
+    const speedKmPerMin = speedKmh / 60;
 
     // 2. Generate new incoming orders in Monterrey
     const newOrders = this.orderStream.generateTick(
@@ -212,10 +219,10 @@ export class ShiftEngine {
     // 3. Dispatch decisions for couriers who have available capacity
     await this.evaluateDispatch(newOrders);
 
-    // 4. Advance physical movement & order lifecycle for all couriers
-    this.stepCourierPhysics('agent_a', speedKmPerMin);
-    this.stepCourierPhysics('agent_b', speedKmPerMin);
-    this.stepCourierPhysics('baseline', speedKmPerMin);
+    // 4. Advance physical movement & order lifecycle along real street waypoints
+    await this.stepCourierPhysics('agent_a', speedKmPerMin);
+    await this.stepCourierPhysics('agent_b', speedKmPerMin);
+    await this.stepCourierPhysics('baseline', speedKmPerMin);
 
     // 5. Broadcast live state to SSE subscribers
     this.subscribers.forEach((cb) => {
@@ -278,7 +285,7 @@ export class ShiftEngine {
         const ord = newOrders.find((o) => o.id === orderId || o.order_id === orderId);
         if (ord && !courierA.carryingOrders.some((o) => o.id === ord.id)) {
           courierA.carryingOrders.push(ord);
-          this.initCourierTask(courierA);
+          await this.initCourierTask(courierA);
         }
       } else {
         courierA.skippedOrders += decA.skipped.length;
@@ -297,7 +304,7 @@ export class ShiftEngine {
         }
       }
       if (courierB.carryingOrders.length > 0 && !courierB.currentTask) {
-        this.initCourierTask(courierB);
+        await this.initCourierTask(courierB);
       }
       courierB.skippedOrders += decB.skipped.length;
     }
@@ -311,7 +318,7 @@ export class ShiftEngine {
         const ord = newOrders.find((o) => o.id === orderId || o.order_id === orderId);
         if (ord && !courierBase.carryingOrders.some((o) => o.id === ord.id)) {
           courierBase.carryingOrders.push(ord);
-          this.initCourierTask(courierBase);
+          await this.initCourierTask(courierBase);
         }
       } else {
         courierBase.skippedOrders += decBase.skipped.length;
@@ -319,7 +326,7 @@ export class ShiftEngine {
     }
   }
 
-  private initCourierTask(courier: CourierState) {
+  private async initCourierTask(courier: CourierState) {
     if (courier.carryingOrders.length === 0) {
       courier.status = 'idle';
       courier.currentTask = undefined;
@@ -328,21 +335,117 @@ export class ShiftEngine {
     }
 
     const nextOrder = courier.carryingOrders[0];
+    const target = {
+      lat: nextOrder.pickup.lat,
+      lng: nextOrder.pickup.lon || nextOrder.pickup.lng!,
+    };
+
     courier.status = 'moving_to_pickup';
+
+    // Fetch real street-following geometry via OSRM / Monterrey road grid
+    const route = await fetchRoute({ lat: courier.lat, lng: courier.lng }, target);
+
     courier.currentTask = {
       orderId: nextOrder.id || nextOrder.order_id,
       phase: 'to_pickup',
-      target: { lat: nextOrder.pickup.lat, lng: nextOrder.pickup.lon || nextOrder.pickup.lng! },
+      target,
       targetName: nextOrder.pickup.zone,
       waitTicksRemaining: 1, // 1 minute prep at kitchen
+      waypoints: route.waypoints,
+      waypointIndex: 0,
+      totalRouteKm: route.distanceKm,
     };
-    courier.activeRoute = [
-      { lat: courier.lat, lng: courier.lng },
-      courier.currentTask.target,
-    ];
+
+    courier.activeRoute =
+      route.waypoints && route.waypoints.length > 0
+        ? route.waypoints
+        : [{ lat: courier.lat, lng: courier.lng }, target];
   }
 
-  private stepCourierPhysics(agentKey: 'agent_a' | 'agent_b' | 'baseline', stepKm: number) {
+  /**
+   * Advances courier along street waypoints tick-by-tick.
+   * Returns true if courier reached final target.
+   */
+  private advanceAlongWaypoints(
+    courier: CourierState,
+    task: CourierTask,
+    stepKm: number
+  ): boolean {
+    let remainingStepKm = stepKm;
+
+    if (!task.waypoints || task.waypoints.length === 0) {
+      const dist = haversineKm(courier.lat, courier.lng, task.target.lat, task.target.lng);
+      if (dist <= remainingStepKm) {
+        courier.lat = task.target.lat;
+        courier.lng = task.target.lng;
+        courier.totalKm = Math.round((courier.totalKm + dist) * 10) / 10;
+        courier.activeRoute = [];
+        return true;
+      }
+      const ratio = remainingStepKm / dist;
+      courier.lat += (task.target.lat - courier.lat) * ratio;
+      courier.lng += (task.target.lng - courier.lng) * ratio;
+      courier.totalKm = Math.round((courier.totalKm + remainingStepKm) * 10) / 10;
+      courier.activeRoute = [{ lat: courier.lat, lng: courier.lng }, task.target];
+      return false;
+    }
+
+    let idx = task.waypointIndex ?? 0;
+
+    while (remainingStepKm > 0.0001 && idx < task.waypoints.length) {
+      const nextWp = task.waypoints[idx];
+      const distToWp = haversineKm(courier.lat, courier.lng, nextWp.lat, nextWp.lng);
+
+      if (distToWp <= 0.002) {
+        idx++;
+        task.waypointIndex = idx;
+        continue;
+      }
+
+      if (remainingStepKm >= distToWp) {
+        // Reached this street waypoint on this step
+        courier.lat = nextWp.lat;
+        courier.lng = nextWp.lng;
+        courier.totalKm = Math.round((courier.totalKm + distToWp) * 10) / 10;
+        remainingStepKm -= distToWp;
+        idx++;
+        task.waypointIndex = idx;
+      } else {
+        // Advance partway towards waypoint along street line
+        const ratio = remainingStepKm / distToWp;
+        courier.lat += (nextWp.lat - courier.lat) * ratio;
+        courier.lng += (nextWp.lng - courier.lng) * ratio;
+        courier.totalKm = Math.round((courier.totalKm + remainingStepKm) * 10) / 10;
+        remainingStepKm = 0;
+        break;
+      }
+    }
+
+    task.waypointIndex = idx;
+
+    if (idx >= task.waypoints.length) {
+      const finalDist = haversineKm(courier.lat, courier.lng, task.target.lat, task.target.lng);
+      courier.lat = task.target.lat;
+      courier.lng = task.target.lng;
+      if (finalDist > 0.001) {
+        courier.totalKm = Math.round((courier.totalKm + finalDist) * 10) / 10;
+      }
+      courier.activeRoute = [];
+      return true;
+    }
+
+    // Active route is current courier position + remaining unreached street waypoints
+    courier.activeRoute = [
+      { lat: courier.lat, lng: courier.lng },
+      ...task.waypoints.slice(idx),
+    ];
+    return false;
+  }
+
+  private async stepCourierPhysics(
+    agentKey: 'agent_a' | 'agent_b' | 'baseline',
+    stepKm: number
+  ) {
     const courier = this.state.agents[agentKey];
     const task = courier.currentTask;
 
@@ -351,25 +454,14 @@ export class ShiftEngine {
       return;
     }
 
-    // 1. Moving to restaurant / pickup
+    // 1. Moving to restaurant / pickup along real street waypoints
     if (task.phase === 'to_pickup') {
-      const dist = haversineKm(courier.lat, courier.lng, task.target.lat, task.target.lng);
-
-      if (dist <= stepKm) {
-        // Arrived at restaurant!
-        courier.lat = task.target.lat;
-        courier.lng = task.target.lng;
-        courier.totalKm = Math.round((courier.totalKm + dist) * 10) / 10;
+      const arrived = this.advanceAlongWaypoints(courier, task, stepKm);
+      if (arrived) {
         courier.status = 'waiting_at_pickup';
         courier.activeRoute = [];
       } else {
-        // Step forward along road vector
-        const ratio = stepKm / dist;
-        courier.lat += (task.target.lat - courier.lat) * ratio;
-        courier.lng += (task.target.lng - courier.lng) * ratio;
-        courier.totalKm = Math.round((courier.totalKm + stepKm) * 10) / 10;
         courier.status = 'moving_to_pickup';
-        courier.activeRoute = [{ lat: courier.lat, lng: courier.lng }, task.target];
       }
       return;
     }
@@ -383,49 +475,51 @@ export class ShiftEngine {
           (o) => o.id === task.orderId || o.order_id === task.orderId
         );
         if (order) {
+          const dropoffTarget = {
+            lat: order.dropoff.lat,
+            lng: order.dropoff.lon || order.dropoff.lng!,
+          };
+          const route = await fetchRoute({ lat: courier.lat, lng: courier.lng }, dropoffTarget);
+
           task.phase = 'to_dropoff';
-          task.target = { lat: order.dropoff.lat, lng: order.dropoff.lon || order.dropoff.lng! };
+          task.target = dropoffTarget;
           task.targetName = order.dropoff.zone;
+          task.waypoints = route.waypoints;
+          task.waypointIndex = 0;
+          task.totalRouteKm = route.distanceKm;
+
           courier.status = 'delivering';
-          courier.activeRoute = [{ lat: courier.lat, lng: courier.lng }, task.target];
+          courier.activeRoute =
+            route.waypoints && route.waypoints.length > 0
+              ? route.waypoints
+              : [{ lat: courier.lat, lng: courier.lng }, dropoffTarget];
         } else {
-          this.initCourierTask(courier);
+          await this.initCourierTask(courier);
         }
       }
       return;
     }
 
-    // 3. Delivering order to customer
+    // 3. Delivering order to customer along real street waypoints
     if (task.phase === 'to_dropoff') {
-      const dist = haversineKm(courier.lat, courier.lng, task.target.lat, task.target.lng);
-
-      if (dist <= stepKm) {
+      const arrived = this.advanceAlongWaypoints(courier, task, stepKm);
+      if (arrived) {
         // Order Delivered!
-        courier.lat = task.target.lat;
-        courier.lng = task.target.lng;
-        courier.totalKm = Math.round((courier.totalKm + dist) * 10) / 10;
-
-        // Credit real earnings
         const completedIndex = courier.carryingOrders.findIndex(
           (o) => o.id === task.orderId || o.order_id === task.orderId
         );
         if (completedIndex >= 0) {
           const completedOrder = courier.carryingOrders[completedIndex];
-          courier.currentEarnings = Math.round((courier.currentEarnings + completedOrder.total_pay) * 10) / 10;
+          courier.currentEarnings =
+            Math.round((courier.currentEarnings + completedOrder.total_pay) * 10) / 10;
           courier.completedOrders += 1;
           courier.carryingOrders.splice(completedIndex, 1);
         }
 
         // Check if there are other batched orders to deliver
-        this.initCourierTask(courier);
+        await this.initCourierTask(courier);
       } else {
-        // Step forward towards dropoff
-        const ratio = stepKm / dist;
-        courier.lat += (task.target.lat - courier.lat) * ratio;
-        courier.lng += (task.target.lng - courier.lng) * ratio;
-        courier.totalKm = Math.round((courier.totalKm + stepKm) * 10) / 10;
         courier.status = 'delivering';
-        courier.activeRoute = [{ lat: courier.lat, lng: courier.lng }, task.target];
       }
     }
   }

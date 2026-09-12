@@ -7,6 +7,7 @@ import AgentPanel from '@/components/dashboard/AgentPanel';
 import MapView from '@/components/map/MapView';
 import EventBanner from '@/components/dashboard/EventBanner';
 import ComparisonTable from '@/components/dashboard/ComparisonTable';
+import OrderCard from '@/components/dashboard/OrderCard';
 import Link from 'next/link';
 
 export default function Home() {
@@ -65,6 +66,16 @@ export default function Home() {
         </div>
 
         <div className="flex items-center space-x-3">
+          {shiftState && activeShiftId && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/90 border border-slate-700/80 rounded-lg text-xs font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-slate-300">
+                Tick {shiftState.tick}/{shiftState.totalMinutes}
+              </span>
+              <span className="text-slate-600">|</span>
+              <span className="text-emerald-400 font-semibold">{shiftState.elapsedMinutes}m elapsed</span>
+            </div>
+          )}
           <Link
             href="/audit"
             className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-medium transition border border-slate-700"
@@ -124,6 +135,33 @@ export default function Home() {
 
       {/* Monterrey Live Map View */}
       <MapView shiftState={shiftState} />
+
+      {/* Live Order Feed */}
+      {shiftState && shiftState.newOrders && shiftState.newOrders.length > 0 && (
+        <div className="bg-[#111827]/80 backdrop-blur border border-slate-800 rounded-xl p-4 space-y-3 shadow-lg">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+              Live Order Dispatch Feed (Tick {shiftState.tick})
+            </h3>
+            <span className="text-[10px] text-slate-400 font-mono">
+              {shiftState.newOrders.length} incoming requests
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {shiftState.newOrders.slice(0, 3).map((ord) => {
+              const ordId = ord.id || ord.order_id;
+              const isAcceptedA = shiftState.decisions?.agent_a?.accepted?.includes(ordId);
+              const isAcceptedB = shiftState.decisions?.agent_b?.accepted?.includes(ordId);
+              const isAcceptedBase = shiftState.decisions?.baseline?.accepted?.includes(ordId);
+              const decision = isAcceptedA || isAcceptedB || isAcceptedBase ? 'accept' : 'skip';
+              return (
+                <OrderCard key={ordId} order={ord} decision={decision} />
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Comparison Metrics */}
       <ComparisonTable state={shiftState} />

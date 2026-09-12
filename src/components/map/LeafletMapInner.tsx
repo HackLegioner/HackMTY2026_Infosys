@@ -75,6 +75,28 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     []
   );
 
+  const iconPickup = useMemo(
+    () =>
+      L.divIcon({
+        className: 'pickup-pin',
+        html: `<div class="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-md border border-amber-300 flex items-center">🍴</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      }),
+    []
+  );
+
+  const iconDropoff = useMemo(
+    () =>
+      L.divIcon({
+        className: 'dropoff-pin',
+        html: `<div class="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-md border border-rose-300 flex items-center">🏠</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      }),
+    []
+  );
+
   const courierA = shiftState?.agents.agent_a;
   const courierB = shiftState?.agents.agent_b;
   const courierBase = shiftState?.agents.baseline;
@@ -164,7 +186,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       {courierA && courierA.activeRoute.length > 1 && (
         <Polyline
           positions={courierA.activeRoute.map((p) => [p.lat, p.lng])}
-          pathOptions={{ color: '#3B82F6', weight: 3, opacity: 0.8, dashArray: '4, 4' }}
+          pathOptions={{ color: '#3B82F6', weight: 4, opacity: 0.85 }}
         />
       )}
 
@@ -172,9 +194,38 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       {courierB && courierB.activeRoute.length > 1 && (
         <Polyline
           positions={courierB.activeRoute.map((p) => [p.lat, p.lng])}
-          pathOptions={{ color: '#10B981', weight: 3, opacity: 0.8 }}
+          pathOptions={{ color: '#10B981', weight: 4, opacity: 0.85 }}
         />
       )}
+
+      {/* Baseline Route Polyline */}
+      {courierBase && courierBase.activeRoute.length > 1 && (
+        <Polyline
+          positions={courierBase.activeRoute.map((p) => [p.lat, p.lng])}
+          pathOptions={{ color: '#94A3B8', weight: 3, opacity: 0.65, dashArray: '4, 4' }}
+        />
+      )}
+
+      {/* Target Destination Markers (Pickup / Dropoff) */}
+      {[courierA, courierB, courierBase].map((c) => {
+        if (!c?.currentTask?.target) return null;
+        const isPickup = c.currentTask.phase === 'to_pickup';
+        return (
+          <Marker
+            key={`target-${c.agentId}-${c.currentTask.orderId}`}
+            position={[c.currentTask.target.lat, c.currentTask.target.lng]}
+            icon={isPickup ? iconPickup : iconDropoff}
+          >
+            <Popup className="text-slate-900 text-xs">
+              <strong>{isPickup ? '🍴 Pickup Point' : '🏠 Dropoff Point'}</strong>
+              <br />
+              Zone: {c.currentTask.targetName}
+              <br />
+              Agent: {c.agentId}
+            </Popup>
+          </Marker>
+        );
+      })}
 
       {/* Agent A Marker */}
       {courierA && (

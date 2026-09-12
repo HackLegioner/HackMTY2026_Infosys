@@ -47,6 +47,9 @@ export interface CourierTask {
   target: Coordinates;
   targetName: string;
   waitTicksRemaining: number;
+  waypoints?: Coordinates[];
+  waypointIndex?: number;
+  totalRouteKm?: number;
 }
 
 export interface CourierState {
