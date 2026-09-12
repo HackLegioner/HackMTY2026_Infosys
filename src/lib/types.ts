@@ -10,6 +10,10 @@ export interface Order {
   id: string;
   platform: string;
   order_type: string;
+  food_type?: 'snack' | 'fast_food' | 'casual_dining' | 'groceries' | 'buffet_gourmet';
+  prep_time_min?: number;
+  traffic_density?: 'low' | 'medium' | 'high' | 'jam';
+  tip?: number;
   pickup: { lat: number; lon: number; lng?: number; zone: string };
   dropoff: { lat: number; lon: number; lng?: number; zone: string };
   base_pay: number;
@@ -28,7 +32,7 @@ export interface Order {
 export interface DisruptionEvent {
   event_id: string;
   id?: string;
-  event_type: 'surge' | 'rain' | 'road_closure' | 'unsafe_zone';
+  event_type: 'surge' | 'rain' | 'road_closure' | 'unsafe_zone' | 'extreme_heat' | 'rush_hour';
   type?: string;
   lat?: number;
   lon?: number;
@@ -64,6 +68,8 @@ export interface CourierState {
   carryingOrders: Order[];
   currentTask?: CourierTask;
   status: 'idle' | 'moving_to_pickup' | 'waiting_at_pickup' | 'delivering';
+  speedKmh?: number;
+  corridorName?: string;
 }
 
 export interface AgentDecisionData {
@@ -97,5 +103,19 @@ export interface ShiftState {
     agent_a: AgentDecisionData;
     agent_b: AgentDecisionData;
     baseline: AgentDecisionData;
+  };
+  weather?: {
+    temperature: number;
+    rainMm: number;
+    condition: string;
+    isRain: boolean;
+    isExtremeHeat: boolean;
+    description: string;
+  };
+  traffic?: {
+    formattedTime: string;
+    isRushHour: boolean;
+    averageSpeedKmh: number;
+    congestionLevel: string;
   };
 }

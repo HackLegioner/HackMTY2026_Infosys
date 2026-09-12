@@ -7,6 +7,8 @@ import { connectDB } from '@/lib/db/mongoose';
 import { Shift } from '@/lib/db/ShiftModel';
 import { Decision } from '@/lib/db/DecisionModel';
 import { fetchRoute } from '@/lib/routing/osrmClient';
+import { fetchMonterreyWeather } from '@/lib/weather/openMeteoClient';
+import { calculateCourierTrafficSpeed, getMonterreyTimeOfDay } from '@/lib/traffic/congestionModel';
 
 declare global {
   var __shiftsMap: Map<string, ShiftEngine> | undefined;
@@ -85,6 +87,8 @@ export class ShiftEngine {
       activeRoute: [],
       carryingOrders: [],
       status: 'idle',
+      speedKmh: 25.0,
+      corridorName: 'Monterrey Zona Metropolitana',
     });
 
     this.state = {
@@ -137,6 +141,20 @@ export class ShiftEngine {
           primary_reasoning: 'FIFO queue active...',
         },
       },
+      weather: {
+        temperature: 28.5,
+        rainMm: 0,
+        condition: 'clear',
+        isRain: false,
+        isExtremeHeat: false,
+        description: '☀️ Monterrey despejado',
+      },
+      traffic: {
+        formattedTime: '18:15',
+        isRushHour: true,
+        averageSpeedKmh: 22.0,
+        congestionLevel: 'moderate',
+      },
     };
   }
 
@@ -149,6 +167,44 @@ export class ShiftEngine {
 
   public async start() {
     if (this.timer) return;
+
+    // Fetch live Monterrey weather via Open-Meteo API
+    try {
+      const weather = await fetchMonterreyWeather();
+      this.state.weather = {
+        temperature: weather.temperature,
+        rainMm: Math.round((weather.rainMm + weather.showersMm) * 10) / 10,
+        condition: weather.condition,
+        isRain: weather.isRain,
+        isExtremeHeat: weather.isExtremeHeat,
+        description: weather.description,
+      };
+
+      if (weather.isRain && !this.state.activeEvents.some((e) => e.event_type === 'rain')) {
+        this.state.activeEvents.push({
+          event_id: `evt_meteo_rain_${Date.now()}`,
+          event_type: 'rain',
+          affected_zones: ['Centro', 'San Pedro', 'Valle Oriente', 'Cumbres', 'Tec / ITESM'],
+          metadata: { multiplier: weather.suggestedSurgeMultiplier, reason: weather.description },
+          description: weather.description,
+          active: true,
+        });
+      } else if (
+        weather.isExtremeHeat &&
+        !this.state.activeEvents.some((e) => e.event_type === 'extreme_heat')
+      ) {
+        this.state.activeEvents.push({
+          event_id: `evt_meteo_heat_${Date.now()}`,
+          event_type: 'extreme_heat',
+          affected_zones: ['Centro', 'San Pedro', 'Valle Oriente', 'Apodaca', 'Escobedo'],
+          metadata: { multiplier: weather.suggestedSurgeMultiplier, reason: weather.description },
+          description: weather.description,
+          active: true,
+        });
+      }
+    } catch (err) {
+      console.warn('[ShiftEngine] Weather fetch error on start:', err);
+    }
 
     await this.tick();
 
@@ -178,6 +234,20 @@ export class ShiftEngine {
       clearInterval(this.timer);
       this.timer = null;
     }
+
+    // Reset status of all couriers to idle when simulation ends
+    this.state.agents.agent_a.status = 'idle';
+    this.state.agents.agent_a.activeRoute = [];
+    this.state.agents.agent_b.status = 'idle';
+    this.state.agents.agent_b.activeRoute = [];
+    this.state.agents.baseline.status = 'idle';
+    this.state.agents.baseline.activeRoute = [];
+
+    this.subscribers.forEach((cb) => {
+      try {
+        cb(this.state);
+      } catch (_err) {}
+    });
   }
 
   public triggerEvent(presetIndex?: number) {
@@ -197,18 +267,56 @@ export class ShiftEngine {
     this.state.tick += 1;
     this.state.elapsedMinutes += 1;
 
-    // 1. Check traffic speed based on weather and road disruptions
-    const hasRain = this.state.activeEvents.some((e) => e.event_type === 'rain');
-    const hasRoadClosure = this.state.activeEvents.some((e) => e.event_type === 'road_closure');
-    // Normal city motorcycle speed: 25 km/h -> 0.42 km/min.
-    // Rain: 16 km/h. Road closure bottleneck: 18 km/h. Both: 12 km/h.
-    let speedKmh = 25;
-    if (hasRain && hasRoadClosure) speedKmh = 12;
-    else if (hasRain) speedKmh = 16;
-    else if (hasRoadClosure) speedKmh = 18;
-    const speedKmPerMin = speedKmh / 60;
+    // 1. Weather speed impact
+    const hasRain =
+      this.state.weather?.isRain || this.state.activeEvents.some((e) => e.event_type === 'rain');
+    const hasHeat =
+      this.state.weather?.isExtremeHeat ||
+      this.state.activeEvents.some((e) => e.event_type === 'extreme_heat');
+    const weatherSpeedFactor = hasRain ? 0.64 : hasHeat ? 0.88 : 1.0;
 
-    // 2. Generate new incoming orders in Monterrey
+    // 2. Courier-specific traffic congestion based on Monterrey coordinates & rush hours
+    const courierA = this.state.agents.agent_a;
+    const courierB = this.state.agents.agent_b;
+    const courierBase = this.state.agents.baseline;
+
+    const trafficA = calculateCourierTrafficSpeed(
+      courierA.lat,
+      courierA.lng,
+      this.state.elapsedMinutes,
+      weatherSpeedFactor
+    );
+    courierA.speedKmh = trafficA.speedKmh;
+    courierA.corridorName = trafficA.corridorName;
+
+    const trafficB = calculateCourierTrafficSpeed(
+      courierB.lat,
+      courierB.lng,
+      this.state.elapsedMinutes,
+      weatherSpeedFactor
+    );
+    courierB.speedKmh = trafficB.speedKmh;
+    courierB.corridorName = trafficB.corridorName;
+
+    const trafficBase = calculateCourierTrafficSpeed(
+      courierBase.lat,
+      courierBase.lng,
+      this.state.elapsedMinutes,
+      weatherSpeedFactor
+    );
+    courierBase.speedKmh = trafficBase.speedKmh;
+    courierBase.corridorName = trafficBase.corridorName;
+
+    const timeInfo = getMonterreyTimeOfDay(this.state.elapsedMinutes);
+    this.state.traffic = {
+      formattedTime: timeInfo.formattedTime,
+      isRushHour: timeInfo.isRushHour,
+      averageSpeedKmh:
+        Math.round(((trafficA.speedKmh + trafficB.speedKmh + trafficBase.speedKmh) / 3) * 10) / 10,
+      congestionLevel: trafficA.congestionLevel,
+    };
+
+    // 3. Generate new incoming orders with Kaggle distributions
     const newOrders = this.orderStream.generateTick(
       this.state.elapsedMinutes * 60,
       this.state.activeEvents
@@ -216,22 +324,22 @@ export class ShiftEngine {
     this.state.newOrders = newOrders;
     this.state.activeEvents = this.eventEngine.getActiveEvents();
 
-    // 3. Dispatch decisions for couriers who have available capacity
+    // 4. Dispatch decisions for couriers who have available capacity
     await this.evaluateDispatch(newOrders);
 
-    // 4. Advance physical movement & order lifecycle along real street waypoints
-    await this.stepCourierPhysics('agent_a', speedKmPerMin);
-    await this.stepCourierPhysics('agent_b', speedKmPerMin);
-    await this.stepCourierPhysics('baseline', speedKmPerMin);
+    // 5. Advance physical movement & order lifecycle along real street waypoints with calibrated speeds
+    await this.stepCourierPhysics('agent_a', trafficA.speedKmPerMin);
+    await this.stepCourierPhysics('agent_b', trafficB.speedKmPerMin);
+    await this.stepCourierPhysics('baseline', trafficBase.speedKmPerMin);
 
-    // 5. Broadcast live state to SSE subscribers
+    // 6. Broadcast live state to SSE subscribers
     this.subscribers.forEach((cb) => {
       try {
         cb(this.state);
       } catch (_err) {}
     });
 
-    // 6. Async persistence
+    // 7. Async persistence
     connectDB().then(async (conn) => {
       if (conn) {
         try {
@@ -345,12 +453,16 @@ export class ShiftEngine {
     // Fetch real street-following geometry via OSRM / Monterrey road grid
     const route = await fetchRoute({ lat: courier.lat, lng: courier.lng }, target);
 
+    // Calibrated kitchen prep wait time based on Kaggle food type (1-3 ticks)
+    const prepMin = nextOrder.prep_time_min || 10;
+    const waitTicks = Math.max(1, Math.min(3, Math.round(prepMin / 7)));
+
     courier.currentTask = {
       orderId: nextOrder.id || nextOrder.order_id,
       phase: 'to_pickup',
       target,
       targetName: nextOrder.pickup.zone,
-      waitTicksRemaining: 1, // 1 minute prep at kitchen
+      waitTicksRemaining: waitTicks,
       waypoints: route.waypoints,
       waypointIndex: 0,
       totalRouteKm: route.distanceKm,
@@ -466,7 +578,7 @@ export class ShiftEngine {
       return;
     }
 
-    // 2. Waiting at kitchen for preparation
+    // 2. Waiting at kitchen for preparation (calibrated via Kaggle prep times)
     if (courier.status === 'waiting_at_pickup') {
       task.waitTicksRemaining -= 1;
       if (task.waitTicksRemaining <= 0) {

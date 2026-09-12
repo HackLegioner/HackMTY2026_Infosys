@@ -1,4 +1,5 @@
 import { Order, DisruptionEvent } from '@/lib/types';
+import { getMonterreyTimeOfDay, getZoneBottleneck } from '@/lib/traffic/congestionModel';
 
 export const MONTERREY_ZONES = [
   { lat: 25.6714, lon: -100.3102, name: 'Centro', weight: 1.4 },
@@ -14,14 +15,25 @@ export const MONTERREY_ZONES = [
 ];
 
 const PLATFORMS = ['rappi', 'didi', 'uber_eats'];
-const ORDER_TYPES = ['food', 'groceries', 'pharmacy', 'package'];
 
-// Calibrated realistic Monterrey platform pricing (MXN)
-const BASE_PAY_RANGES: Record<string, [number, number]> = {
-  food: [35, 55],
-  groceries: [45, 75],
-  pharmacy: [30, 50],
-  package: [40, 65],
+export type FoodType = 'snack' | 'fast_food' | 'casual_dining' | 'groceries' | 'buffet_gourmet';
+
+// Kaggle Food Delivery Dataset: Kitchen prep time distributions (min, max in minutes)
+const KAGGLE_PREP_TIMES: Record<FoodType, [number, number]> = {
+  snack: [5, 8],
+  fast_food: [10, 16],
+  casual_dining: [18, 26],
+  groceries: [8, 14],
+  buffet_gourmet: [25, 35],
+};
+
+// Base pay ranges in Monterrey (MXN)
+const BASE_PAY_RANGES: Record<FoodType, [number, number]> = {
+  snack: [28, 42],
+  fast_food: [35, 55],
+  casual_dining: [50, 75],
+  groceries: [45, 70],
+  buffet_gourmet: [65, 95],
 };
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -54,46 +66,103 @@ export class OrderStream {
   }
 
   public generateTick(elapsedSeconds: number, activeEvents: DisruptionEvent[]): Order[] {
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    const timeInfo = getMonterreyTimeOfDay(elapsedMinutes);
+
+    // Weather condition check
+    const hasRain = activeEvents.some((e) => e.event_type === 'rain');
+    const hasHeat = activeEvents.some((e) => e.event_type === 'extreme_heat');
+
+    // Aggregate surge multiplier from active events
     let surgeMultiplier = 1.0;
     for (const evt of activeEvents) {
-      if ((evt.event_type === 'surge' || evt.type === 'surge') && evt.metadata?.multiplier) {
+      if (evt.metadata?.multiplier) {
         surgeMultiplier = Math.max(surgeMultiplier, evt.metadata.multiplier);
       }
     }
 
-    // Realistic order offer stream: 1 or 2 new orders per tick
-    const nOrders = Math.floor(this.random() * 2) + 1;
+    // Realistic order offer stream: 1 to 3 orders per tick
+    const nOrders = Math.floor(this.random() * 3) + 1;
     const orders: Order[] = [];
+
+    const foodTypeKeys: FoodType[] = [
+      'snack',
+      'fast_food',
+      'fast_food', // Higher frequency in delivery apps
+      'casual_dining',
+      'groceries',
+      'buffet_gourmet',
+    ];
 
     for (let i = 0; i < nOrders; i++) {
       const pickupZone = this.pickZone();
       const dropoffZone = this.pickZone();
-      const orderType = ORDER_TYPES[Math.floor(this.random() * ORDER_TYPES.length)];
-      const [minPay, maxPay] = BASE_PAY_RANGES[orderType];
-      
+      const foodType = foodTypeKeys[Math.floor(this.random() * foodTypeKeys.length)];
+
+      // 1. Kaggle Prep Time Distribution
+      const [minPrep, maxPrep] = KAGGLE_PREP_TIMES[foodType];
+      const prepTimeMin = Math.round(minPrep + this.random() * (maxPrep - minPrep));
+
+      // 2. Pricing and distance calculation
+      const [minPay, maxPay] = BASE_PAY_RANGES[foodType];
       const rawDist = haversineKm(pickupZone.lat, pickupZone.lon, dropoffZone.lat, dropoffZone.lon);
       const estDist = Math.max(1.2, Math.round(rawDist * 1.35 * 10) / 10);
       
-      // Real formula: base pay + extra km fee ($6.5 MXN/km above 2km)
+      // Distance fee: $6.50 MXN/km beyond 2km
       const distBonus = Math.max(0, (estDist - 2.0) * 6.5);
       const basePay = Math.round(minPay + this.random() * (maxPay - minPay) + distBonus);
-      const estTime = Math.round((estDist / 25) * 60 * 10) / 10;
-      
-      // Tips in Mexico: 60% $0, 25% $10, 15% $20
+
+      // 3. Traffic density evaluation along corridor
+      const zoneBottleneck = getZoneBottleneck(pickupZone.lat, pickupZone.lon);
+      let trafficDensity: Order['traffic_density'] = 'low';
+      if (timeInfo.isRushHour && zoneBottleneck.zoneMultiplier <= 0.55) {
+        trafficDensity = 'jam';
+      } else if (timeInfo.isRushHour || zoneBottleneck.zoneMultiplier <= 0.65) {
+        trafficDensity = 'high';
+      } else if (zoneBottleneck.zoneMultiplier <= 0.85) {
+        trafficDensity = 'medium';
+      }
+
+      // 4. Traffic delay adjustment to delivery time
+      const speedFactor =
+        trafficDensity === 'jam' ? 0.48 : trafficDensity === 'high' ? 0.62 : trafficDensity === 'medium' ? 0.80 : 1.0;
+      const baseTravelMin = (estDist / 25) * 60;
+      const estTime = Math.round((baseTravelMin / speedFactor + prepTimeMin) * 10) / 10;
+
+      // 5. Kaggle Calibrated Tip Distribution (MXN)
+      let tip = 0;
       const tipRoll = this.random();
-      const tip = tipRoll < 0.6 ? 0 : tipRoll < 0.85 ? 10 : 20;
+      if (hasRain || hasHeat) {
+        // Bad weather: customers tip higher
+        if (tipRoll > 0.35) {
+          tip = tipRoll < 0.65 ? Math.round(15 + this.random() * 15) : Math.round(35 + this.random() * 35);
+        }
+      } else {
+        // Standard distribution: 55% $0, 25% $10-$20, 15% $25-$40, 5% $50+
+        if (tipRoll >= 0.55 && tipRoll < 0.80) {
+          tip = Math.round(10 + this.random() * 10);
+        } else if (tipRoll >= 0.80 && tipRoll < 0.95) {
+          tip = Math.round(25 + this.random() * 15);
+        } else if (tipRoll >= 0.95) {
+          tip = Math.round(50 + this.random() * 30);
+        }
+      }
 
       const totalPay = Math.round((basePay * surgeMultiplier + tip) * 100) / 100;
       const payPerKm = Math.round((totalPay / estDist) * 100) / 100;
       const payPerMin = Math.round((totalPay / Math.max(1, estTime)) * 100) / 100;
 
-      const ordId = `ord_${Date.now().toString(36)}_${i}`;
+      const ordId = `ord_${Date.now().toString(36)}_${i}_${Math.floor(this.random() * 1000)}`;
 
       orders.push({
         order_id: ordId,
         id: ordId,
         platform: PLATFORMS[Math.floor(this.random() * PLATFORMS.length)],
-        order_type: orderType,
+        order_type: 'food',
+        food_type: foodType,
+        prep_time_min: prepTimeMin,
+        traffic_density: trafficDensity,
+        tip,
         pickup: {
           lat: Number((pickupZone.lat + (this.random() - 0.5) * 0.012).toFixed(5)),
           lon: Number((pickupZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
