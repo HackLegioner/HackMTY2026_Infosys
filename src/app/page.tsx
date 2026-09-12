@@ -12,11 +12,13 @@ import Link from 'next/link';
 
 export default function Home() {
   const [activeShiftId, setActiveShiftId] = useState<string | null>(null);
+  const [durationMin, setDurationMin] = useState<number>(480);
+  const [tickSpeedMs, setTickSpeedMs] = useState<number>(1000);
   const { startShift, stopShift, triggerDisaster, loading } = useShiftControl();
   const { state: shiftState } = useShiftStream(activeShiftId);
 
   const handleStart = async () => {
-    const res = await startShift(60, 42);
+    const res = await startShift(durationMin, 42, tickSpeedMs);
     if (res) {
       setActiveShiftId(res.shiftId);
     }
@@ -104,13 +106,36 @@ export default function Home() {
           >
             🔍 Audit Panel
           </Link>
+          {!activeShiftId && (
+            <div className="flex items-center gap-1.5">
+              <select
+                value={durationMin}
+                onChange={(e) => setDurationMin(Number(e.target.value))}
+                className="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-blue-500 font-medium"
+              >
+                <option value={480}>Turno Completo (8h / 480 Ticks)</option>
+                <option value={240}>Medio Turno (4h / 240 Ticks)</option>
+                <option value={120}>Turno Corto (2h / 120 Ticks)</option>
+                <option value={60}>Hora Pico (1h / 60 Ticks)</option>
+              </select>
+              <select
+                value={tickSpeedMs}
+                onChange={(e) => setTickSpeedMs(Number(e.target.value))}
+                className="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 font-medium"
+              >
+                <option value={1000}>1x (1s/tick)</option>
+                <option value={500}>2x (0.5s/tick)</option>
+                <option value={2000}>0.5x (2s/tick)</option>
+              </select>
+            </div>
+          )}
           {!activeShiftId ? (
             <button
               onClick={handleStart}
               disabled={loading}
-              className="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold shadow-lg shadow-emerald-950 transition cursor-pointer"
+              className="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold shadow-lg shadow-emerald-950 transition cursor-pointer flex items-center gap-1"
             >
-              {loading ? 'Starting...' : '▶ Start Shift (60 Ticks)'}
+              {loading ? 'Iniciando...' : `▶ Iniciar Turno (${durationMin} Ticks)`}
             </button>
           ) : (
             <button
@@ -118,7 +143,7 @@ export default function Home() {
               disabled={loading}
               className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-500 text-white rounded font-bold shadow-lg shadow-rose-950 transition cursor-pointer"
             >
-              ⏹ Stop Shift
+              ⏹ Detener Turno
             </button>
           )}
         </div>

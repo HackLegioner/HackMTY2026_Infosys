@@ -32,7 +32,7 @@ export default function DriverDashboardPage() {
   }, [activeShiftId]);
 
   const currentTick = shiftState ? (shiftState.tick ?? (shiftState as any).currentTick ?? 0) : 0;
-  const totalTicks = shiftState ? (shiftState.totalMinutes ?? (shiftState as any).totalTicks ?? 60) : 60;
+  const totalTicks = shiftState ? (shiftState.totalMinutes ?? (shiftState as any).totalTicks ?? 480) : 480;
 
   // Estado de simulación activa (corriendo ticks > 0 y dentro del límite total)
   const isSimulationRunning = Boolean(
@@ -53,7 +53,7 @@ export default function DriverDashboardPage() {
   const handleToggleSimulation = async () => {
     setManualOverrides({});
     if (!isSimulationRunning) {
-      const res = await startShift(60, 42);
+      const res = await startShift(480, 42, 1000);
       if (res) setActiveShiftId(res.shiftId);
     } else if (activeShiftId) {
       await stopShift(activeShiftId);

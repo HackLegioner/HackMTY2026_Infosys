@@ -17,9 +17,14 @@ declare global {
 const shiftsMap: Map<string, ShiftEngine> =
   globalThis.__shiftsMap ?? (globalThis.__shiftsMap = new Map<string, ShiftEngine>());
 
-export function getOrCreateShift(shiftId: string, durationMin: number = 60, seed: number = 42): ShiftEngine {
+export function getOrCreateShift(
+  shiftId: string,
+  durationMin: number = 480,
+  seed: number = 42,
+  tickSpeedMs: number = 1000
+): ShiftEngine {
   if (!shiftsMap.has(shiftId)) {
-    const engine = new ShiftEngine(shiftId, durationMin, seed);
+    const engine = new ShiftEngine(shiftId, durationMin, seed, tickSpeedMs);
     shiftsMap.set(shiftId, engine);
   }
   return shiftsMap.get(shiftId)!;
@@ -60,13 +65,20 @@ export class ShiftEngine {
   private orderStream: OrderStream;
   private eventEngine: EventEngine;
   private baselineAgent: BaselineAgent;
+  public tickSpeedMs: number;
   public timer: NodeJS.Timeout | null = null;
   private subscribers: Array<(state: ShiftState) => void> = [];
 
-  constructor(shiftId: string, durationMin: number = 60, seed: number = 42) {
+  constructor(
+    shiftId: string,
+    durationMin: number = 480,
+    seed: number = 42,
+    tickSpeedMs: number = 1000
+  ) {
     this.shiftId = shiftId;
     this.durationMin = durationMin;
     this.seed = seed;
+    this.tickSpeedMs = tickSpeedMs;
     this.orderStream = new OrderStream(seed);
     this.eventEngine = new EventEngine();
     this.baselineAgent = new BaselineAgent();
@@ -226,7 +238,7 @@ export class ShiftEngine {
 
     this.timer = setInterval(async () => {
       await this.tick();
-    }, 2000);
+    }, this.tickSpeedMs);
   }
 
   public stop() {
@@ -570,6 +582,7 @@ export class ShiftEngine {
     if (task.phase === 'to_pickup') {
       const arrived = this.advanceAlongWaypoints(courier, task, stepKm);
       if (arrived) {
+        task.phase = 'waiting';
         courier.status = 'waiting_at_pickup';
         courier.activeRoute = [];
       } else {
@@ -579,7 +592,7 @@ export class ShiftEngine {
     }
 
     // 2. Waiting at kitchen for preparation (calibrated via Kaggle prep times)
-    if (courier.status === 'waiting_at_pickup') {
+    if (task.phase === 'waiting' || courier.status === 'waiting_at_pickup') {
       task.waitTicksRemaining -= 1;
       if (task.waitTicksRemaining <= 0) {
         // Order is ready! Switch phase to dropoff
