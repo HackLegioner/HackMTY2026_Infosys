@@ -1,17 +1,22 @@
-import { getActiveShift, getOrCreateShift } from '@/lib/simulator/shift';
-
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+import { getActiveShift, getOrCreateShift, getOrHydrateShift } from '@/lib/simulator/shift';
+import { getShiftStatus } from '@/lib/security/redisClient';
 
 // WebSocket / SSE handler for real-time simulation tick streaming
-export function GET(request: Request) {
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const shiftId = searchParams.get('shiftId') || `shift_${Date.now()}`;
 
-  // Resilient lookup: active or create
-  const engine = getActiveShift(shiftId) || getOrCreateShift(shiftId);
+  // Resilient lookup with Upstash Redis hydration
+  const engine = getActiveShift(shiftId) || (await getOrHydrateShift(shiftId));
 
-  // Auto-start engine if not running
-  if (!engine.timer) {
+  // Check if manually stopped
+  const status = await getShiftStatus(shiftId);
+
+  // Auto-start engine if not running and not stopped
+  if (!engine.timer && status !== 'stopped') {
     engine.start();
   }
 

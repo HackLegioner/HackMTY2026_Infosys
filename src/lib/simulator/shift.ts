@@ -9,6 +9,12 @@ import { Decision } from '@/lib/db/DecisionModel';
 import { fetchRoute } from '@/lib/routing/osrmClient';
 import { fetchMonterreyWeather } from '@/lib/weather/openMeteoClient';
 import { calculateCourierTrafficSpeed, getMonterreyTimeOfDay } from '@/lib/traffic/congestionModel';
+import {
+  saveShiftState,
+  getShiftState,
+  popPendingEvents,
+  setShiftStatus,
+} from '@/lib/security/redisClient';
 
 declare global {
   var __shiftsMap: Map<string, ShiftEngine> | undefined;
@@ -28,6 +34,26 @@ export function getOrCreateShift(
     shiftsMap.set(shiftId, engine);
   }
   return shiftsMap.get(shiftId)!;
+}
+
+export async function getOrHydrateShift(
+  shiftId: string,
+  durationMin: number = 480,
+  seed: number = 42,
+  tickSpeedMs: number = 1000
+): Promise<ShiftEngine> {
+  let engine = shiftsMap.get(shiftId);
+  if (!engine) {
+    engine = new ShiftEngine(shiftId, durationMin, seed, tickSpeedMs);
+    try {
+      const cached = await getShiftState(shiftId);
+      if (cached) {
+        engine.hydrateState(cached);
+      }
+    } catch (_err) {}
+    shiftsMap.set(shiftId, engine);
+  }
+  return engine;
 }
 
 export function getActiveShift(shiftId: string): ShiftEngine | undefined {
@@ -72,6 +98,11 @@ export class ShiftEngine {
 
   public getState(): ShiftState {
     return this.state;
+  }
+
+  public hydrateState(savedState: ShiftState) {
+    this.state = savedState;
+    this.durationMin = savedState.totalMinutes;
   }
 
   constructor(
@@ -225,6 +256,9 @@ export class ShiftEngine {
 
     await this.tick();
 
+    await setShiftStatus(this.shiftId, 'running').catch(() => {});
+    await saveShiftState(this.shiftId, this.state).catch(() => {});
+
     connectDB().then(async (conn) => {
       if (conn) {
         try {
@@ -259,6 +293,9 @@ export class ShiftEngine {
     this.state.agents.agent_b.activeRoute = [];
     this.state.agents.baseline.status = 'idle';
     this.state.agents.baseline.activeRoute = [];
+
+    setShiftStatus(this.shiftId, 'stopped').catch(() => {});
+    saveShiftState(this.shiftId, this.state).catch(() => {});
 
     this.subscribers.forEach((cb) => {
       try {
@@ -301,6 +338,18 @@ export class ShiftEngine {
       this.stop();
       return;
     }
+
+    // 0. Consume pending events queued from other serverless lambdas via Upstash Redis
+    try {
+      const pendingEvents = await popPendingEvents(this.shiftId);
+      if (pendingEvents && pendingEvents.length > 0) {
+        for (const pe of pendingEvents) {
+          if (!this.state.activeEvents.some((e) => e.event_id === pe.event_id)) {
+            this.state.activeEvents.push(pe);
+          }
+        }
+      }
+    } catch (_err) {}
 
     this.state.tick += 1;
     this.state.elapsedMinutes += 1;
@@ -412,6 +461,9 @@ export class ShiftEngine {
     if (this.historicalDecisions.length > 300) {
       this.historicalDecisions.splice(0, this.historicalDecisions.length - 300);
     }
+
+    // Persist current state snapshot to Upstash Redis
+    saveShiftState(this.shiftId, this.state).catch(() => {});
 
     connectDB().then(async (conn) => {
       if (conn) {

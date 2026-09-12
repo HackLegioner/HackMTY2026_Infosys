@@ -1,6 +1,10 @@
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getOrCreateShift } from '@/lib/simulator/shift';
+import { saveShiftState, setShiftStatus } from '@/lib/security/redisClient';
 
 const StartShiftSchema = z.object({
   shiftId: z.string().optional(),
@@ -27,6 +31,8 @@ export async function POST(request: Request) {
     );
 
     await engine.start();
+    await setShiftStatus(shiftId, 'running').catch(() => {});
+    await saveShiftState(shiftId, engine.state).catch(() => {});
 
     return NextResponse.json({
       ok: true,
