@@ -7,7 +7,12 @@ import { connectDB } from '@/lib/db/mongoose';
 import { Shift } from '@/lib/db/ShiftModel';
 import { Decision } from '@/lib/db/DecisionModel';
 
-const shiftsMap = new Map<string, ShiftEngine>();
+declare global {
+  var __shiftsMap: Map<string, ShiftEngine> | undefined;
+}
+
+const shiftsMap: Map<string, ShiftEngine> =
+  globalThis.__shiftsMap ?? (globalThis.__shiftsMap = new Map<string, ShiftEngine>());
 
 export function getOrCreateShift(shiftId: string, durationMin: number = 60, seed: number = 42): ShiftEngine {
   if (!shiftsMap.has(shiftId)) {
@@ -38,7 +43,7 @@ export class ShiftEngine {
   private orderStream: OrderStream;
   private eventEngine: EventEngine;
   private baselineAgent: BaselineAgent;
-  private timer: NodeJS.Timeout | null = null;
+  public timer: NodeJS.Timeout | null = null;
   private subscribers: Array<(state: ShiftState) => void> = [];
 
   constructor(shiftId: string, durationMin: number = 60, seed: number = 42) {
@@ -124,6 +129,9 @@ export class ShiftEngine {
   public async start() {
     if (this.timer) return;
 
+    // Trigger immediate first tick
+    await this.tick();
+
     connectDB().then(async (conn) => {
       if (conn) {
         try {
@@ -192,8 +200,12 @@ export class ShiftEngine {
     this.updateCourier('agent_b', decB, newOrders);
     this.updateCourier('baseline', decBase, newOrders);
 
-    // Notify subscribers (SSE stream)
-    this.subscribers.forEach((cb) => cb(this.state));
+    // Notify all active subscribers
+    this.subscribers.forEach((cb) => {
+      try {
+        cb(this.state);
+      } catch (_err) {}
+    });
 
     connectDB().then(async (conn) => {
       if (conn) {

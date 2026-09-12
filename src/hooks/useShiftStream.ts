@@ -9,19 +9,38 @@ export function useShiftStream(shiftId: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!shiftId) return;
+    if (!shiftId) {
+      setState(null);
+      setIsConnected(false);
+      return;
+    }
 
+    let isMounted = true;
+
+    // Quick initial status fetch
+    fetch(`/api/sim/status/${shiftId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data.state) {
+          setState(data.state);
+        }
+      })
+      .catch(() => {});
+
+    // SSE Stream
     const eventSource = new EventSource(`/api/ws?shiftId=${shiftId}`);
 
     eventSource.onopen = () => {
-      setIsConnected(true);
-      setError(null);
+      if (isMounted) {
+        setIsConnected(true);
+        setError(null);
+      }
     };
 
     eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        if (payload.state) {
+        if (isMounted && payload.state) {
           setState(payload.state);
         }
       } catch (err) {
@@ -30,11 +49,29 @@ export function useShiftStream(shiftId: string | null) {
     };
 
     eventSource.onerror = () => {
-      setIsConnected(false);
-      setError('Connection interrupted. Reconnecting...');
+      if (isMounted) {
+        setIsConnected(false);
+      }
     };
 
+    // Polling backup interval (ensures live ticks flow seamlessly)
+    const backupInterval = setInterval(async () => {
+      if (!isMounted) return;
+      try {
+        const res = await fetch(`/api/sim/status/${shiftId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.state && isMounted) {
+            setState(data.state);
+            setIsConnected(true);
+          }
+        }
+      } catch (_err) {}
+    }, 2000);
+
     return () => {
+      isMounted = false;
+      clearInterval(backupInterval);
       eventSource.close();
     };
   }, [shiftId]);

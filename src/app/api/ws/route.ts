@@ -1,23 +1,18 @@
-import { getActiveShift } from '@/lib/simulator/shift';
+import { getActiveShift, getOrCreateShift } from '@/lib/simulator/shift';
+
+export const dynamic = 'force-dynamic';
 
 // WebSocket / SSE handler for real-time simulation tick streaming
 export function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const shiftId = searchParams.get('shiftId');
+  const shiftId = searchParams.get('shiftId') || `shift_${Date.now()}`;
 
-  if (!shiftId) {
-    return new Response(JSON.stringify({ error: 'Missing shiftId parameter' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // Resilient lookup: active or create
+  const engine = getActiveShift(shiftId) || getOrCreateShift(shiftId);
 
-  const engine = getActiveShift(shiftId);
-  if (!engine) {
-    return new Response(JSON.stringify({ error: `Shift ${shiftId} not found` }), {
-      status: 404,
-      headers: { 'Content-Type': 'application/json' },
-    });
+  // Auto-start engine if not running
+  if (!engine.timer) {
+    engine.start();
   }
 
   // SSE stream implementation
@@ -25,7 +20,7 @@ export function GET(request: Request) {
     start(controller) {
       const encoder = new TextEncoder();
 
-      // Send initial state
+      // Send initial state immediately
       controller.enqueue(
         encoder.encode(`data: ${JSON.stringify({ type: 'init', state: engine.state })}\n\n`)
       );
@@ -42,7 +37,9 @@ export function GET(request: Request) {
 
       request.signal.addEventListener('abort', () => {
         unsubscribe();
-        controller.close();
+        try {
+          controller.close();
+        } catch (_err) {}
       });
     },
   });
@@ -50,8 +47,9 @@ export function GET(request: Request) {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   });
 }

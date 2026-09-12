@@ -68,9 +68,9 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     () =>
       L.divIcon({
         className: 'zone-dot',
-        html: `<div class="w-2 h-2 rounded-full bg-slate-500/60 border border-slate-400/40"></div>`,
-        iconSize: [8, 8],
-        iconAnchor: [4, 4],
+        html: `<div class="w-2.5 h-2.5 rounded-full bg-slate-400/80 border border-slate-200/50"></div>`,
+        iconSize: [10, 10],
+        iconAnchor: [5, 5],
       }),
     []
   );
@@ -87,9 +87,11 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       className="w-full h-full rounded-xl"
       style={{ background: '#0A0E1A' }}
     >
+      {/* 100% Free OpenStreetMap tile server with dark mode CSS filter - No API key required */}
       <TileLayer
-        attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        className="dark-tiles"
       />
 
       {/* Static Monterrey Hotspot Hubs */}
@@ -117,7 +119,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
               pathOptions={{
                 color: '#F59E0B',
                 fillColor: '#F59E0B',
-                fillOpacity: 0.2,
+                fillOpacity: 0.25,
                 weight: 2,
                 dashArray: '5, 8',
               }}
@@ -142,7 +144,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
               pathOptions={{
                 color: '#EF4444',
                 fillColor: '#EF4444',
-                fillOpacity: 0.25,
+                fillOpacity: 0.3,
                 weight: 2,
               }}
             >
