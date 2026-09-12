@@ -16,11 +16,12 @@ export const MONTERREY_ZONES = [
 const PLATFORMS = ['rappi', 'didi', 'uber_eats'];
 const ORDER_TYPES = ['food', 'groceries', 'pharmacy', 'package'];
 
+// Calibrated realistic Monterrey platform pricing (MXN)
 const BASE_PAY_RANGES: Record<string, [number, number]> = {
-  food: [35, 85],
-  groceries: [45, 120],
-  pharmacy: [30, 70],
-  package: [50, 150],
+  food: [35, 55],
+  groceries: [45, 75],
+  pharmacy: [30, 50],
+  package: [40, 65],
 };
 
 function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -55,12 +56,13 @@ export class OrderStream {
   public generateTick(elapsedSeconds: number, activeEvents: DisruptionEvent[]): Order[] {
     let surgeMultiplier = 1.0;
     for (const evt of activeEvents) {
-      if (evt.event_type === 'surge' && evt.metadata?.multiplier) {
+      if ((evt.event_type === 'surge' || evt.type === 'surge') && evt.metadata?.multiplier) {
         surgeMultiplier = Math.max(surgeMultiplier, evt.metadata.multiplier);
       }
     }
 
-    const nOrders = Math.floor(this.random() * 3) + 1; // 1 to 3 orders per tick
+    // Realistic order offer stream: 1 or 2 new orders per tick
+    const nOrders = Math.floor(this.random() * 2) + 1;
     const orders: Order[] = [];
 
     for (let i = 0; i < nOrders; i++) {
@@ -68,36 +70,50 @@ export class OrderStream {
       const dropoffZone = this.pickZone();
       const orderType = ORDER_TYPES[Math.floor(this.random() * ORDER_TYPES.length)];
       const [minPay, maxPay] = BASE_PAY_RANGES[orderType];
-      const basePay = Math.round(minPay + this.random() * (maxPay - minPay));
-      const dist = haversineKm(pickupZone.lat, pickupZone.lon, dropoffZone.lat, dropoffZone.lon);
-      const estDist = Math.max(1.2, Math.round(dist * 1.3 * 10) / 10);
+      
+      const rawDist = haversineKm(pickupZone.lat, pickupZone.lon, dropoffZone.lat, dropoffZone.lon);
+      const estDist = Math.max(1.2, Math.round(rawDist * 1.35 * 10) / 10);
+      
+      // Real formula: base pay + extra km fee ($6.5 MXN/km above 2km)
+      const distBonus = Math.max(0, (estDist - 2.0) * 6.5);
+      const basePay = Math.round(minPay + this.random() * (maxPay - minPay) + distBonus);
       const estTime = Math.round((estDist / 25) * 60 * 10) / 10;
-      const tip = [0, 10, 20, 30][Math.floor(this.random() * 4)];
+      
+      // Tips in Mexico: 60% $0, 25% $10, 15% $20
+      const tipRoll = this.random();
+      const tip = tipRoll < 0.6 ? 0 : tipRoll < 0.85 ? 10 : 20;
 
       const totalPay = Math.round((basePay * surgeMultiplier + tip) * 100) / 100;
       const payPerKm = Math.round((totalPay / estDist) * 100) / 100;
       const payPerMin = Math.round((totalPay / Math.max(1, estTime)) * 100) / 100;
 
+      const ordId = `ord_${Date.now().toString(36)}_${i}`;
+
       orders.push({
-        order_id: `ord_${Date.now().toString(36)}_${i}`,
+        order_id: ordId,
+        id: ordId,
         platform: PLATFORMS[Math.floor(this.random() * PLATFORMS.length)],
         order_type: orderType,
         pickup: {
-          lat: pickupZone.lat + (this.random() - 0.5) * 0.01,
-          lon: pickupZone.lon + (this.random() - 0.5) * 0.01,
+          lat: Number((pickupZone.lat + (this.random() - 0.5) * 0.012).toFixed(5)),
+          lon: Number((pickupZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
+          lng: Number((pickupZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
           zone: pickupZone.name,
         },
         dropoff: {
-          lat: dropoffZone.lat + (this.random() - 0.5) * 0.01,
-          lon: dropoffZone.lon + (this.random() - 0.5) * 0.01,
+          lat: Number((dropoffZone.lat + (this.random() - 0.5) * 0.012).toFixed(5)),
+          lon: Number((dropoffZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
+          lng: Number((dropoffZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
           zone: dropoffZone.name,
         },
         base_pay: basePay,
         surge_multiplier: surgeMultiplier,
         total_pay: totalPay,
+        payout: totalPay,
         pay_per_km: payPerKm,
         pay_per_min: payPerMin,
         estimated_distance_km: estDist,
+        distanceKm: estDist,
         estimated_time_min: estTime,
         expires_in_seconds: 15,
       });

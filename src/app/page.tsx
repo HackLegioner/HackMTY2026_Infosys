@@ -43,6 +43,7 @@ export default function Home() {
     completedOrders: 0,
     skippedOrders: 0,
     activeRoute: [],
+    carryingOrders: [],
     status: 'idle' as const,
   });
 

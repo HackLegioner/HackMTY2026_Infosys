@@ -7,19 +7,19 @@ export interface Coordinates {
 
 export interface Order {
   order_id: string;
-  id?: string;
+  id: string;
   platform: string;
   order_type: string;
-  pickup: { lat: number; lon: number; zone: string };
-  dropoff: { lat: number; lon: number; zone: string };
+  pickup: { lat: number; lon: number; lng?: number; zone: string };
+  dropoff: { lat: number; lon: number; lng?: number; zone: string };
   base_pay: number;
   surge_multiplier: number;
   total_pay: number;
-  payout?: number;
+  payout: number;
   pay_per_km: number;
   pay_per_min: number;
   estimated_distance_km: number;
-  distanceKm?: number;
+  distanceKm: number;
   estimated_time_min: number;
   expires_in_seconds: number;
   expireAtTick?: number;
@@ -41,6 +41,14 @@ export interface DisruptionEvent {
 
 export type DisasterEvent = DisruptionEvent;
 
+export interface CourierTask {
+  orderId: string;
+  phase: 'to_pickup' | 'waiting' | 'to_dropoff';
+  target: Coordinates;
+  targetName: string;
+  waitTicksRemaining: number;
+}
+
 export interface CourierState {
   agentId: 'agent_a' | 'agent_b' | 'baseline';
   lat: number;
@@ -50,7 +58,9 @@ export interface CourierState {
   completedOrders: number;
   skippedOrders: number;
   activeRoute: Coordinates[];
-  status: 'idle' | 'en_route' | 'delivering';
+  carryingOrders: Order[];
+  currentTask?: CourierTask;
+  status: 'idle' | 'moving_to_pickup' | 'waiting_at_pickup' | 'delivering';
 }
 
 export interface AgentDecisionData {

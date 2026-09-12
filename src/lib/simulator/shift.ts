@@ -1,4 +1,4 @@
-import { ShiftState, CourierState } from '@/lib/types';
+import { ShiftState, CourierState, Order, CourierTask } from '@/lib/types';
 import { OrderStream } from './orderStream';
 import { EventEngine } from './events';
 import { BaselineAgent } from './baseline';
@@ -35,6 +35,20 @@ export function removeShift(shiftId: string): boolean {
   return false;
 }
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export class ShiftEngine {
   public shiftId: string;
   public durationMin: number;
@@ -54,15 +68,21 @@ export class ShiftEngine {
     this.eventEngine = new EventEngine();
     this.baselineAgent = new BaselineAgent();
 
-    const initialCourier = (agentId: 'agent_a' | 'agent_b' | 'baseline'): CourierState => ({
+    // Couriers start in Monterrey Centro hubs with slight offset
+    const initialCourier = (
+      agentId: 'agent_a' | 'agent_b' | 'baseline',
+      startLat: number,
+      startLng: number
+    ): CourierState => ({
       agentId,
-      lat: 25.6692,
-      lng: -100.3099,
+      lat: startLat,
+      lng: startLng,
       currentEarnings: 0,
       totalKm: 0,
       completedOrders: 0,
       skippedOrders: 0,
       activeRoute: [],
+      carryingOrders: [],
       status: 'idle',
     });
 
@@ -72,9 +92,9 @@ export class ShiftEngine {
       elapsedMinutes: 0,
       totalMinutes: durationMin,
       agents: {
-        agent_a: initialCourier('agent_a'),
-        agent_b: initialCourier('agent_b'),
-        baseline: initialCourier('baseline'),
+        agent_a: initialCourier('agent_a', 25.6692, -100.3099), // Macroplaza
+        agent_b: initialCourier('agent_b', 25.6574, -100.3684), // Centrito San Pedro
+        baseline: initialCourier('baseline', 25.6866, -100.3161), // Tec de Monterrey
       },
       activeEvents: [],
       newOrders: [],
@@ -89,7 +109,7 @@ export class ShiftEngine {
           orders_completed: 0,
           orders_skipped: 0,
           strategy: 'DQN RL (Profit/km)',
-          primary_reasoning: 'Initializing agent...',
+          primary_reasoning: 'Waiting for high-margin orders...',
         },
         agent_b: {
           agent_id: 'agent_b',
@@ -101,7 +121,7 @@ export class ShiftEngine {
           orders_completed: 0,
           orders_skipped: 0,
           strategy: 'OR-Tools + XGBoost (Throughput)',
-          primary_reasoning: 'Initializing agent...',
+          primary_reasoning: 'Scanning for batch opportunities...',
         },
         baseline: {
           agent_id: 'baseline',
@@ -113,7 +133,7 @@ export class ShiftEngine {
           orders_completed: 0,
           orders_skipped: 0,
           strategy: 'Naive FIFO',
-          primary_reasoning: 'Initializing benchmark...',
+          primary_reasoning: 'FIFO queue active...',
         },
       },
     };
@@ -129,7 +149,6 @@ export class ShiftEngine {
   public async start() {
     if (this.timer) return;
 
-    // Trigger immediate first tick
     await this.tick();
 
     connectDB().then(async (conn) => {
@@ -177,6 +196,12 @@ export class ShiftEngine {
     this.state.tick += 1;
     this.state.elapsedMinutes += 1;
 
+    // 1. Check traffic speed based on weather/closures
+    const hasRain = this.state.activeEvents.some((e) => e.event_type === 'rain');
+    // Normal city motorcycle speed: 25 km/h -> 0.42 km/min. Rain: 16 km/h -> 0.27 km/min
+    const speedKmPerMin = hasRain ? 16 / 60 : 25 / 60;
+
+    // 2. Generate new incoming orders in Monterrey
     const newOrders = this.orderStream.generateTick(
       this.state.elapsedMinutes * 60,
       this.state.activeEvents
@@ -184,29 +209,22 @@ export class ShiftEngine {
     this.state.newOrders = newOrders;
     this.state.activeEvents = this.eventEngine.getActiveEvents();
 
-    const [decA, decB] = await Promise.all([
-      getAgentDecision('agent_a', newOrders, this.state, this.state.activeEvents),
-      getAgentDecision('agent_b', newOrders, this.state, this.state.activeEvents),
-    ]);
-    const decBase = this.baselineAgent.decide(newOrders);
+    // 3. Dispatch decisions for couriers who have available capacity
+    await this.evaluateDispatch(newOrders);
 
-    this.state.decisions = {
-      agent_a: decA,
-      agent_b: decB,
-      baseline: decBase,
-    };
+    // 4. Advance physical movement & order lifecycle for all couriers
+    this.stepCourierPhysics('agent_a', speedKmPerMin);
+    this.stepCourierPhysics('agent_b', speedKmPerMin);
+    this.stepCourierPhysics('baseline', speedKmPerMin);
 
-    this.updateCourier('agent_a', decA, newOrders);
-    this.updateCourier('agent_b', decB, newOrders);
-    this.updateCourier('baseline', decBase, newOrders);
-
-    // Notify all active subscribers
+    // 5. Broadcast live state to SSE subscribers
     this.subscribers.forEach((cb) => {
       try {
         cb(this.state);
       } catch (_err) {}
     });
 
+    // 6. Async persistence
     connectDB().then(async (conn) => {
       if (conn) {
         try {
@@ -215,28 +233,28 @@ export class ShiftEngine {
               shiftId: this.shiftId,
               tick: this.state.tick,
               agentId: 'agent_a',
-              accepted: decA.accepted.length,
-              skipped: decA.skipped.length,
-              reasoning: decA.primary_reasoning,
-              payload: decA,
+              accepted: this.state.decisions.agent_a.accepted.length,
+              skipped: this.state.decisions.agent_a.skipped.length,
+              reasoning: this.state.decisions.agent_a.primary_reasoning,
+              payload: this.state.decisions.agent_a,
             },
             {
               shiftId: this.shiftId,
               tick: this.state.tick,
               agentId: 'agent_b',
-              accepted: decB.accepted.length,
-              skipped: decB.skipped.length,
-              reasoning: decB.primary_reasoning,
-              payload: decB,
+              accepted: this.state.decisions.agent_b.accepted.length,
+              skipped: this.state.decisions.agent_b.skipped.length,
+              reasoning: this.state.decisions.agent_b.primary_reasoning,
+              payload: this.state.decisions.agent_b,
             },
             {
               shiftId: this.shiftId,
               tick: this.state.tick,
               agentId: 'baseline',
-              accepted: decBase.accepted.length,
-              skipped: decBase.skipped.length,
-              reasoning: decBase.primary_reasoning,
-              payload: decBase,
+              accepted: this.state.decisions.baseline.accepted.length,
+              skipped: this.state.decisions.baseline.skipped.length,
+              reasoning: this.state.decisions.baseline.primary_reasoning,
+              payload: this.state.decisions.baseline,
             },
           ]);
         } catch (_err) {}
@@ -244,27 +262,171 @@ export class ShiftEngine {
     });
   }
 
-  private updateCourier(agentKey: 'agent_a' | 'agent_b' | 'baseline', dec: any, newOrders: any[]) {
-    const courier = this.state.agents[agentKey];
-    courier.currentEarnings = dec.earnings_total;
-    courier.totalKm = dec.km_total;
-    courier.completedOrders = dec.orders_completed;
-    courier.skippedOrders = dec.orders_skipped;
+  private async evaluateDispatch(newOrders: Order[]) {
+    if (newOrders.length === 0) return;
 
-    if (dec.accepted && dec.accepted.length > 0) {
-      const acceptedOrder = newOrders.find((o) => o.order_id === dec.accepted[0]);
-      if (acceptedOrder) {
-        courier.lat = acceptedOrder.dropoff.lat;
-        courier.lng = acceptedOrder.dropoff.lon;
-        courier.activeRoute = [
-          { lat: acceptedOrder.pickup.lat, lng: acceptedOrder.pickup.lon },
-          { lat: acceptedOrder.dropoff.lat, lng: acceptedOrder.dropoff.lon },
-        ];
-        courier.status = 'delivering';
+    const courierA = this.state.agents.agent_a;
+    const courierB = this.state.agents.agent_b;
+    const courierBase = this.state.agents.baseline;
+
+    // Agent A (Economist): Max capacity = 1 order in bag (selective high-yield)
+    if (courierA.carryingOrders.length < 1) {
+      const decA = await getAgentDecision('agent_a', newOrders, courierA, this.state.activeEvents);
+      this.state.decisions.agent_a = decA;
+      if (decA.accepted.length > 0) {
+        const orderId = decA.accepted[0];
+        const ord = newOrders.find((o) => o.id === orderId || o.order_id === orderId);
+        if (ord && !courierA.carryingOrders.some((o) => o.id === ord.id)) {
+          courierA.carryingOrders.push(ord);
+          this.initCourierTask(courierA);
+        }
+      } else {
+        courierA.skippedOrders += decA.skipped.length;
       }
-    } else {
+    }
+
+    // Agent B (Hustler): Max capacity = 3 orders (OR-Tools multi-drop clustering)
+    if (courierB.carryingOrders.length < 3) {
+      const decB = await getAgentDecision('agent_b', newOrders, courierB, this.state.activeEvents);
+      this.state.decisions.agent_b = decB;
+      for (const orderId of decB.accepted) {
+        if (courierB.carryingOrders.length >= 3) break;
+        const ord = newOrders.find((o) => o.id === orderId || o.order_id === orderId);
+        if (ord && !courierB.carryingOrders.some((o) => o.id === ord.id)) {
+          courierB.carryingOrders.push(ord);
+        }
+      }
+      if (courierB.carryingOrders.length > 0 && !courierB.currentTask) {
+        this.initCourierTask(courierB);
+      }
+      courierB.skippedOrders += decB.skipped.length;
+    }
+
+    // Baseline: Max capacity = 1 (FIFO naive standard)
+    if (courierBase.carryingOrders.length < 1) {
+      const decBase = this.baselineAgent.decide(newOrders);
+      this.state.decisions.baseline = decBase;
+      if (decBase.accepted.length > 0) {
+        const orderId = decBase.accepted[0];
+        const ord = newOrders.find((o) => o.id === orderId || o.order_id === orderId);
+        if (ord && !courierBase.carryingOrders.some((o) => o.id === ord.id)) {
+          courierBase.carryingOrders.push(ord);
+          this.initCourierTask(courierBase);
+        }
+      } else {
+        courierBase.skippedOrders += decBase.skipped.length;
+      }
+    }
+  }
+
+  private initCourierTask(courier: CourierState) {
+    if (courier.carryingOrders.length === 0) {
       courier.status = 'idle';
+      courier.currentTask = undefined;
       courier.activeRoute = [];
+      return;
+    }
+
+    const nextOrder = courier.carryingOrders[0];
+    courier.status = 'moving_to_pickup';
+    courier.currentTask = {
+      orderId: nextOrder.id || nextOrder.order_id,
+      phase: 'to_pickup',
+      target: { lat: nextOrder.pickup.lat, lng: nextOrder.pickup.lon || nextOrder.pickup.lng! },
+      targetName: nextOrder.pickup.zone,
+      waitTicksRemaining: 1, // 1 minute prep at kitchen
+    };
+    courier.activeRoute = [
+      { lat: courier.lat, lng: courier.lng },
+      courier.currentTask.target,
+    ];
+  }
+
+  private stepCourierPhysics(agentKey: 'agent_a' | 'agent_b' | 'baseline', stepKm: number) {
+    const courier = this.state.agents[agentKey];
+    const task = courier.currentTask;
+
+    if (!task || courier.status === 'idle') {
+      courier.activeRoute = [];
+      return;
+    }
+
+    // 1. Moving to restaurant / pickup
+    if (task.phase === 'to_pickup') {
+      const dist = haversineKm(courier.lat, courier.lng, task.target.lat, task.target.lng);
+
+      if (dist <= stepKm) {
+        // Arrived at restaurant!
+        courier.lat = task.target.lat;
+        courier.lng = task.target.lng;
+        courier.totalKm = Math.round((courier.totalKm + dist) * 10) / 10;
+        courier.status = 'waiting_at_pickup';
+        courier.activeRoute = [];
+      } else {
+        // Step forward along road vector
+        const ratio = stepKm / dist;
+        courier.lat += (task.target.lat - courier.lat) * ratio;
+        courier.lng += (task.target.lng - courier.lng) * ratio;
+        courier.totalKm = Math.round((courier.totalKm + stepKm) * 10) / 10;
+        courier.status = 'moving_to_pickup';
+        courier.activeRoute = [{ lat: courier.lat, lng: courier.lng }, task.target];
+      }
+      return;
+    }
+
+    // 2. Waiting at kitchen for preparation
+    if (courier.status === 'waiting_at_pickup') {
+      task.waitTicksRemaining -= 1;
+      if (task.waitTicksRemaining <= 0) {
+        // Order is ready! Switch phase to dropoff
+        const order = courier.carryingOrders.find(
+          (o) => o.id === task.orderId || o.order_id === task.orderId
+        );
+        if (order) {
+          task.phase = 'to_dropoff';
+          task.target = { lat: order.dropoff.lat, lng: order.dropoff.lon || order.dropoff.lng! };
+          task.targetName = order.dropoff.zone;
+          courier.status = 'delivering';
+          courier.activeRoute = [{ lat: courier.lat, lng: courier.lng }, task.target];
+        } else {
+          this.initCourierTask(courier);
+        }
+      }
+      return;
+    }
+
+    // 3. Delivering order to customer
+    if (task.phase === 'to_dropoff') {
+      const dist = haversineKm(courier.lat, courier.lng, task.target.lat, task.target.lng);
+
+      if (dist <= stepKm) {
+        // Order Delivered!
+        courier.lat = task.target.lat;
+        courier.lng = task.target.lng;
+        courier.totalKm = Math.round((courier.totalKm + dist) * 10) / 10;
+
+        // Credit real earnings
+        const completedIndex = courier.carryingOrders.findIndex(
+          (o) => o.id === task.orderId || o.order_id === task.orderId
+        );
+        if (completedIndex >= 0) {
+          const completedOrder = courier.carryingOrders[completedIndex];
+          courier.currentEarnings = Math.round((courier.currentEarnings + completedOrder.total_pay) * 10) / 10;
+          courier.completedOrders += 1;
+          courier.carryingOrders.splice(completedIndex, 1);
+        }
+
+        // Check if there are other batched orders to deliver
+        this.initCourierTask(courier);
+      } else {
+        // Step forward towards dropoff
+        const ratio = stepKm / dist;
+        courier.lat += (task.target.lat - courier.lat) * ratio;
+        courier.lng += (task.target.lng - courier.lng) * ratio;
+        courier.totalKm = Math.round((courier.totalKm + stepKm) * 10) / 10;
+        courier.status = 'delivering';
+        courier.activeRoute = [{ lat: courier.lat, lng: courier.lng }, task.target];
+      }
     }
   }
 }
