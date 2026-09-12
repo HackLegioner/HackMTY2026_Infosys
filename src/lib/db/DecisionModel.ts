@@ -4,11 +4,11 @@ const DecisionSchema = new Schema(
   {
     shiftId: { type: String, required: true, index: true },
     tick: Number,
-    agentId: String, // 'agent_a' | 'agent_b' | 'baseline'
+    agentId: String,
     accepted: { type: Number, default: 0 },
     skipped: { type: Number, default: 0 },
     reasoning: String,
-    payload: Schema.Types.Mixed, // full reasoning JSON (gov audit tier)
+    payload: Schema.Types.Mixed,
   },
   { timestamps: true }
 );

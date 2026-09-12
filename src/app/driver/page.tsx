@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import TopNavbar from '@/components/TopNavbar';
 import RouteNetworkMap from '@/components/dashboard/RouteNetworkMap';
 import VehicleDonutChart from '@/components/dashboard/VehicleDonutChart';
@@ -574,15 +575,26 @@ export default function DriverDashboardPage() {
               </h3>
               
               <div className="space-y-2.5 pt-1">
-                <button className="w-full bg-[#09090B] hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-semibold py-2.5 rounded-lg transition shadow-sm">
-                  + Asignar Nuevo Pedido
-                </button>
+                <Link
+                  href="/"
+                  className="w-full bg-[#09090B] hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-semibold py-2.5 rounded-lg transition shadow-sm text-center block"
+                >
+                  🗺️ Ver Mapa de Ruteo OSRM en Vivo
+                </Link>
 
-                <button className="w-full bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => alert('Alerta enviada a la flota: Tráfico pesado detectado en Gonzalitos y Morones Prieto.')}
+                  className="w-full bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
                   <span>ⓘ</span> Alertar a la Flota
                 </button>
 
-                <button className="w-full bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => alert('Reporte de métricas de turno descargado exitosamente.')}
+                  className="w-full bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
+                >
                   <span>⤓</span> Exportar Reporte de Turno
                 </button>
               </div>

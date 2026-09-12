@@ -1,28 +1,49 @@
-import { Order, CourierState } from '@/lib/types';
+import { Order, AgentDecisionData } from '@/lib/types';
 
-export interface BaselineDecision {
-  accepted: string[];
-  skipped: string[];
-  reasoning: string;
-}
+export class BaselineAgent {
+  private totalEarnings = 0;
+  private totalKm = 0;
+  private completedCount = 0;
+  private skippedCount = 0;
 
-export function decideBaseline(orders: Order[], _courier: CourierState): BaselineDecision {
-  if (orders.length === 0) {
+  public decide(orders: Order[]): AgentDecisionData {
+    const accepted: string[] = [];
+    const skipped: string[] = [];
+
+    // Naive FIFO: Accept the first available order only
+    for (let i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      if (i === 0) {
+        accepted.push(order.order_id);
+        this.totalEarnings += order.total_pay;
+        this.totalKm += order.estimated_distance_km;
+        this.completedCount += 1;
+      } else {
+        skipped.push(order.order_id);
+        this.skippedCount += 1;
+      }
+    }
+
     return {
-      accepted: [],
-      skipped: [],
-      reasoning: 'No active orders available on standard app queue.',
+      agent_id: 'baseline',
+      label: 'Traditional App Baseline 📱',
+      accepted,
+      skipped,
+      earnings_total: Math.round(this.totalEarnings * 100) / 100,
+      km_total: Math.round(this.totalKm * 100) / 100,
+      orders_completed: this.completedCount,
+      orders_skipped: this.skippedCount,
+      strategy: 'Naive FIFO (Traditional Delivery App)',
+      primary_reasoning: accepted.length
+        ? 'Accepted first available order (no spatial optimization)'
+        : 'No orders available',
     };
   }
 
-  // Naive FIFO: Accept only the first order in queue, regardless of profitability or distance
-  const first = orders[0];
-  const accepted = [first.id];
-  const skipped = orders.slice(1).map((o) => o.id);
-
-  return {
-    accepted,
-    skipped,
-    reasoning: `Traditional App: FIFO auto-assigned first dispatched order ${first.id} ($${first.payout} MXN, ${first.distanceKm}km).`,
-  };
+  public reset() {
+    this.totalEarnings = 0;
+    this.totalKm = 0;
+    this.completedCount = 0;
+    this.skippedCount = 0;
+  }
 }

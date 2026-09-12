@@ -49,11 +49,13 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
         <div className="flex flex-wrap gap-2">
           {events.map((ev) => (
             <div
-              key={ev.id}
+              key={ev.id || ev.event_id}
               className="px-3 py-1.5 rounded bg-slate-800 border border-amber-500/30 text-xs text-slate-200 flex items-center space-x-2"
             >
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-              <span className="font-semibold text-amber-300">{ev.type.toUpperCase()}:</span>
+              <span className="font-semibold text-amber-300">
+                {(ev.type || ev.event_type || 'CRISIS').toUpperCase()}:
+              </span>
               <span>{ev.description || 'Active scenario'}</span>
             </div>
           ))}

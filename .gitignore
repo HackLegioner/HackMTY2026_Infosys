@@ -6,6 +6,7 @@
 # Next.js build output
 /.next/
 /out/
+tsconfig.tsbuildinfo
 
 # Production
 /build
@@ -17,6 +18,9 @@ __pycache__/
 *.so
 .Python
 env/
+venv/
+.venv/
+python-agents/venv/
 build/
 develop-eggs/
 dist/
@@ -37,6 +41,7 @@ wheels/
 .pytest_cache/
 
 # Environment files
+.env
 .env.local
 .env.development.local
 .env.test.local

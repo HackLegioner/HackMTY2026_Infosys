@@ -1,34 +1,27 @@
-interface RateLimitOptions {
-  limit: number;
-  windowMs: number;
-}
+const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
-interface RateLimitResult {
+export interface RateLimitResult {
   allowed: boolean;
   resetTime: number;
 }
 
-interface ClientRecord {
-  count: number;
-  resetTime: number;
-}
-
-const clients = new Map<string, ClientRecord>();
-
-export function checkRateLimit(ip: string, options: RateLimitOptions): RateLimitResult {
+export function checkRateLimit(
+  ip: string,
+  options: { limit: number; windowMs: number } = { limit: 120, windowMs: 60000 }
+): RateLimitResult {
   const now = Date.now();
-  const record = clients.get(ip);
+  const entry = requestCounts.get(ip);
 
-  if (!record || now > record.resetTime) {
+  if (!entry || now > entry.resetAt) {
     const resetTime = now + options.windowMs;
-    clients.set(ip, { count: 1, resetTime });
+    requestCounts.set(ip, { count: 1, resetAt: resetTime });
     return { allowed: true, resetTime };
   }
 
-  if (record.count >= options.limit) {
-    return { allowed: false, resetTime: record.resetTime };
+  if (entry.count >= options.limit) {
+    return { allowed: false, resetTime: entry.resetAt };
   }
 
-  record.count += 1;
-  return { allowed: true, resetTime: record.resetTime };
+  entry.count += 1;
+  return { allowed: true, resetTime: entry.resetAt };
 }

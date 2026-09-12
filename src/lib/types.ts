@@ -1,6 +1,59 @@
+export type AuditTier = 'public' | 'business' | 'gov';
+
 export interface Coordinates {
   lat: number;
   lng: number;
+}
+
+export interface Order {
+  order_id: string;
+  id: string;
+  platform: string;
+  order_type: string;
+  food_type?: 'snack' | 'fast_food' | 'casual_dining' | 'groceries' | 'buffet_gourmet';
+  prep_time_min?: number;
+  traffic_density?: 'low' | 'medium' | 'high' | 'jam';
+  tip?: number;
+  pickup: { lat: number; lon: number; lng?: number; zone: string };
+  dropoff: { lat: number; lon: number; lng?: number; zone: string };
+  base_pay: number;
+  surge_multiplier: number;
+  total_pay: number;
+  payout: number;
+  pay_per_km: number;
+  pay_per_min: number;
+  estimated_distance_km: number;
+  distanceKm: number;
+  estimated_time_min: number;
+  expires_in_seconds: number;
+  expireAtTick?: number;
+}
+
+export interface DisruptionEvent {
+  event_id: string;
+  id?: string;
+  event_type: 'surge' | 'rain' | 'road_closure' | 'unsafe_zone' | 'extreme_heat' | 'rush_hour';
+  type?: string;
+  lat?: number;
+  lon?: number;
+  radius_km?: number;
+  affected_zones: string[];
+  metadata: Record<string, any>;
+  description: string;
+  active: boolean;
+}
+
+export type DisasterEvent = DisruptionEvent;
+
+export interface CourierTask {
+  orderId: string;
+  phase: 'to_pickup' | 'waiting' | 'to_dropoff';
+  target: Coordinates;
+  targetName: string;
+  waitTicksRemaining: number;
+  waypoints?: Coordinates[];
+  waypointIndex?: number;
+  totalRouteKm?: number;
 }
 
 export interface CourierState {
@@ -12,40 +65,57 @@ export interface CourierState {
   completedOrders: number;
   skippedOrders: number;
   activeRoute: Coordinates[];
-  status: 'idle' | 'delivering' | 'rerouting';
+  carryingOrders: Order[];
+  currentTask?: CourierTask;
+  status: 'idle' | 'moving_to_pickup' | 'waiting_at_pickup' | 'delivering';
+  speedKmh?: number;
+  corridorName?: string;
 }
 
-export interface Order {
-  id: string;
-  pickup: Coordinates;
-  dropoff: Coordinates;
-  payout: number;
-  distanceKm: number;
-  expireAtTick: number;
-  status?: 'available' | 'assigned' | 'completed' | 'expired';
-}
-
-export interface DisasterEvent {
-  id: string;
-  type: 'surge' | 'closure' | 'rain';
-  description?: string;
-  lat?: number;
-  lng?: number;
-  radiusKm?: number;
-  durationTicks?: number;
+export interface AgentDecisionData {
+  agent_id: string;
+  label?: string;
+  accepted: string[];
+  skipped: string[];
+  earnings_total: number;
+  km_total: number;
+  orders_completed: number;
+  orders_skipped: number;
+  strategy: string;
+  primary_reasoning: string;
+  detailed_reasoning?: Record<string, any>;
+  profit_per_km?: number;
 }
 
 export interface ShiftState {
   shiftId: string;
-  currentTick: number;
-  totalTicks: number;
-  activeEvents: DisasterEvent[];
-  orders: Order[];
+  tick: number;
+  elapsedMinutes: number;
+  totalMinutes: number;
   agents: {
     agent_a: CourierState;
     agent_b: CourierState;
     baseline: CourierState;
   };
+  activeEvents: DisruptionEvent[];
+  newOrders: Order[];
+  decisions: {
+    agent_a: AgentDecisionData;
+    agent_b: AgentDecisionData;
+    baseline: AgentDecisionData;
+  };
+  weather?: {
+    temperature: number;
+    rainMm: number;
+    condition: string;
+    isRain: boolean;
+    isExtremeHeat: boolean;
+    description: string;
+  };
+  traffic?: {
+    formattedTime: string;
+    isRushHour: boolean;
+    averageSpeedKmh: number;
+    congestionLevel: string;
+  };
 }
-
-export type AuditTier = 'public' | 'business' | 'gov';

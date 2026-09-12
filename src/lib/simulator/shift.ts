@@ -1,287 +1,638 @@
-import { ShiftState, CourierState, DisasterEvent } from '@/lib/types';
-import { generateOrders } from './orderStream';
-import { createEventFromPreset } from './events';
-import { decideBaseline } from './baseline';
+import { ShiftState, CourierState, Order, CourierTask } from '@/lib/types';
+import { OrderStream } from './orderStream';
+import { EventEngine } from './events';
+import { BaselineAgent } from './baseline';
 import { getAgentDecision } from '@/lib/agents/agentClient';
 import { connectDB } from '@/lib/db/mongoose';
 import { Shift } from '@/lib/db/ShiftModel';
 import { Decision } from '@/lib/db/DecisionModel';
+import { fetchRoute } from '@/lib/routing/osrmClient';
+import { fetchMonterreyWeather } from '@/lib/weather/openMeteoClient';
+import { calculateCourierTrafficSpeed, getMonterreyTimeOfDay } from '@/lib/traffic/congestionModel';
 
-type StateSubscriber = (state: ShiftState) => void;
+declare global {
+  var __shiftsMap: Map<string, ShiftEngine> | undefined;
+}
+
+const shiftsMap: Map<string, ShiftEngine> =
+  globalThis.__shiftsMap ?? (globalThis.__shiftsMap = new Map<string, ShiftEngine>());
+
+export function getOrCreateShift(shiftId: string, durationMin: number = 60, seed: number = 42): ShiftEngine {
+  if (!shiftsMap.has(shiftId)) {
+    const engine = new ShiftEngine(shiftId, durationMin, seed);
+    shiftsMap.set(shiftId, engine);
+  }
+  return shiftsMap.get(shiftId)!;
+}
+
+export function getActiveShift(shiftId: string): ShiftEngine | undefined {
+  return shiftsMap.get(shiftId);
+}
+
+export function removeShift(shiftId: string): boolean {
+  const engine = shiftsMap.get(shiftId);
+  if (engine) {
+    engine.stop();
+    return shiftsMap.delete(shiftId);
+  }
+  return false;
+}
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 export class ShiftEngine {
+  public shiftId: string;
+  public durationMin: number;
+  public seed: number;
   public state: ShiftState;
-  private intervalTimer: NodeJS.Timeout | null = null;
-  private subscribers: Set<StateSubscriber> = new Set();
-  private isRunning: boolean = false;
+  private orderStream: OrderStream;
+  private eventEngine: EventEngine;
+  private baselineAgent: BaselineAgent;
+  public timer: NodeJS.Timeout | null = null;
+  private subscribers: Array<(state: ShiftState) => void> = [];
 
-  constructor(shiftId: string, durationTicks: number = 60, _seed: number = 42) {
-    this.state = {
-      shiftId,
-      currentTick: 0,
-      totalTicks: durationTicks,
-      activeEvents: [],
-      orders: [],
-      agents: {
-        agent_a: this.createInitialCourier('agent_a', 25.6692, -100.3099),
-        agent_b: this.createInitialCourier('agent_b', 25.6514, -100.3235),
-        baseline: this.createInitialCourier('baseline', 25.6766, -100.3444),
-      },
-    };
-  }
+  constructor(shiftId: string, durationMin: number = 60, seed: number = 42) {
+    this.shiftId = shiftId;
+    this.durationMin = durationMin;
+    this.seed = seed;
+    this.orderStream = new OrderStream(seed);
+    this.eventEngine = new EventEngine();
+    this.baselineAgent = new BaselineAgent();
 
-  private createInitialCourier(
-    agentId: 'agent_a' | 'agent_b' | 'baseline',
-    lat: number,
-    lng: number
-  ): CourierState {
-    return {
+    // Couriers start in Monterrey Centro hubs with slight offset
+    const initialCourier = (
+      agentId: 'agent_a' | 'agent_b' | 'baseline',
+      startLat: number,
+      startLng: number
+    ): CourierState => ({
       agentId,
-      lat,
-      lng,
+      lat: startLat,
+      lng: startLng,
       currentEarnings: 0,
       totalKm: 0,
       completedOrders: 0,
       skippedOrders: 0,
-      activeRoute: [{ lat, lng }],
+      activeRoute: [],
+      carryingOrders: [],
       status: 'idle',
+      speedKmh: 25.0,
+      corridorName: 'Monterrey Zona Metropolitana',
+    });
+
+    this.state = {
+      shiftId,
+      tick: 0,
+      elapsedMinutes: 0,
+      totalMinutes: durationMin,
+      agents: {
+        agent_a: initialCourier('agent_a', 25.6692, -100.3099), // Macroplaza
+        agent_b: initialCourier('agent_b', 25.6574, -100.3684), // Centrito San Pedro
+        baseline: initialCourier('baseline', 25.6866, -100.3161), // Tec de Monterrey
+      },
+      activeEvents: [],
+      newOrders: [],
+      decisions: {
+        agent_a: {
+          agent_id: 'agent_a',
+          label: 'The Economist 🧊',
+          accepted: [],
+          skipped: [],
+          earnings_total: 0,
+          km_total: 0,
+          orders_completed: 0,
+          orders_skipped: 0,
+          strategy: 'DQN RL (Profit/km)',
+          primary_reasoning: 'Waiting for high-margin orders...',
+        },
+        agent_b: {
+          agent_id: 'agent_b',
+          label: 'The Hustler ⚡',
+          accepted: [],
+          skipped: [],
+          earnings_total: 0,
+          km_total: 0,
+          orders_completed: 0,
+          orders_skipped: 0,
+          strategy: 'OR-Tools + XGBoost (Throughput)',
+          primary_reasoning: 'Scanning for batch opportunities...',
+        },
+        baseline: {
+          agent_id: 'baseline',
+          label: 'Traditional App Baseline 📱',
+          accepted: [],
+          skipped: [],
+          earnings_total: 0,
+          km_total: 0,
+          orders_completed: 0,
+          orders_skipped: 0,
+          strategy: 'Naive FIFO',
+          primary_reasoning: 'FIFO queue active...',
+        },
+      },
+      weather: {
+        temperature: 28.5,
+        rainMm: 0,
+        condition: 'clear',
+        isRain: false,
+        isExtremeHeat: false,
+        description: '☀️ Monterrey despejado',
+      },
+      traffic: {
+        formattedTime: '18:15',
+        isRushHour: true,
+        averageSpeedKmh: 22.0,
+        congestionLevel: 'moderate',
+      },
     };
   }
 
-  public subscribe(callback: StateSubscriber): () => void {
-    this.subscribers.add(callback);
+  public subscribe(callback: (state: ShiftState) => void) {
+    this.subscribers.push(callback);
     return () => {
-      this.subscribers.delete(callback);
+      this.subscribers = this.subscribers.filter((cb) => cb !== callback);
     };
   }
 
-  private notify() {
-    this.subscribers.forEach((sub) => {
-      try {
-        sub(this.state);
-      } catch (err) {
-        console.error('[ShiftEngine] Subscriber notification error:', err);
+  public async start() {
+    if (this.timer) return;
+
+    // Fetch live Monterrey weather via Open-Meteo API
+    try {
+      const weather = await fetchMonterreyWeather();
+      this.state.weather = {
+        temperature: weather.temperature,
+        rainMm: Math.round((weather.rainMm + weather.showersMm) * 10) / 10,
+        condition: weather.condition,
+        isRain: weather.isRain,
+        isExtremeHeat: weather.isExtremeHeat,
+        description: weather.description,
+      };
+
+      if (weather.isRain && !this.state.activeEvents.some((e) => e.event_type === 'rain')) {
+        this.state.activeEvents.push({
+          event_id: `evt_meteo_rain_${Date.now()}`,
+          event_type: 'rain',
+          affected_zones: ['Centro', 'San Pedro', 'Valle Oriente', 'Cumbres', 'Tec / ITESM'],
+          metadata: { multiplier: weather.suggestedSurgeMultiplier, reason: weather.description },
+          description: weather.description,
+          active: true,
+        });
+      } else if (
+        weather.isExtremeHeat &&
+        !this.state.activeEvents.some((e) => e.event_type === 'extreme_heat')
+      ) {
+        this.state.activeEvents.push({
+          event_id: `evt_meteo_heat_${Date.now()}`,
+          event_type: 'extreme_heat',
+          affected_zones: ['Centro', 'San Pedro', 'Valle Oriente', 'Apodaca', 'Escobedo'],
+          metadata: { multiplier: weather.suggestedSurgeMultiplier, reason: weather.description },
+          description: weather.description,
+          active: true,
+        });
       }
+    } catch (err) {
+      console.warn('[ShiftEngine] Weather fetch error on start:', err);
+    }
+
+    await this.tick();
+
+    connectDB().then(async (conn) => {
+      if (conn) {
+        try {
+          await Shift.updateOne(
+            { shiftId: this.shiftId },
+            {
+              shiftId: this.shiftId,
+              durationMin: this.durationMin,
+              seed: this.seed,
+            },
+            { upsert: true }
+          );
+        } catch (_err) {}
+      }
+    });
+
+    this.timer = setInterval(async () => {
+      await this.tick();
+    }, 2000);
+  }
+
+  public stop() {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+
+    // Reset status of all couriers to idle when simulation ends
+    this.state.agents.agent_a.status = 'idle';
+    this.state.agents.agent_a.activeRoute = [];
+    this.state.agents.agent_b.status = 'idle';
+    this.state.agents.agent_b.activeRoute = [];
+    this.state.agents.baseline.status = 'idle';
+    this.state.agents.baseline.activeRoute = [];
+
+    this.subscribers.forEach((cb) => {
+      try {
+        cb(this.state);
+      } catch (_err) {}
     });
   }
 
-  public triggerEvent(presetIndex: number = 0): DisasterEvent {
-    const event = createEventFromPreset(presetIndex);
-    this.state.activeEvents.push(event);
-    this.notify();
-    return event;
-  }
-
-  public async start(): Promise<void> {
-    if (this.isRunning) return;
-    this.isRunning = true;
-
-    // Initial batch of orders
-    this.state.orders = generateOrders(this.state.currentTick, 4);
-    this.notify();
-
-    // Tick loop (1 tick per second)
-    this.intervalTimer = setInterval(() => {
-      this.tick();
-    }, 1000);
-  }
-
-  public stop(): void {
-    if (this.intervalTimer) {
-      clearInterval(this.intervalTimer);
-      this.intervalTimer = null;
+  public triggerEvent(presetIndex?: number) {
+    const evt = this.eventEngine.triggerPreset(presetIndex || 0);
+    if (evt) {
+      this.state.activeEvents = this.eventEngine.getActiveEvents();
     }
-    this.isRunning = false;
-
-    // Regresar todos los repartidores al estado idle (Disponible) al terminar la simulación
-    if (this.state && this.state.agents) {
-      this.state.agents.agent_a.status = 'idle';
-      this.state.agents.agent_a.activeRoute = [];
-      this.state.agents.agent_b.status = 'idle';
-      this.state.agents.agent_b.activeRoute = [];
-      this.state.agents.baseline.status = 'idle';
-      this.state.agents.baseline.activeRoute = [];
-    }
-
-    this.notify();
+    return evt;
   }
 
-  private async tick(): Promise<void> {
-    if (this.state.currentTick >= this.state.totalTicks) {
+  public async tick() {
+    if (this.state.elapsedMinutes >= this.state.totalMinutes) {
       this.stop();
-      this.persistFinalShift();
       return;
     }
 
-    this.state.currentTick += 1;
+    this.state.tick += 1;
+    this.state.elapsedMinutes += 1;
 
-    // Expire old events
-    this.state.activeEvents = this.state.activeEvents.filter((ev) => {
-      if (!ev.durationTicks) return true;
-      ev.durationTicks -= 1;
-      return ev.durationTicks > 0;
+    // 1. Weather speed impact
+    const hasRain =
+      this.state.weather?.isRain || this.state.activeEvents.some((e) => e.event_type === 'rain');
+    const hasHeat =
+      this.state.weather?.isExtremeHeat ||
+      this.state.activeEvents.some((e) => e.event_type === 'extreme_heat');
+    const weatherSpeedFactor = hasRain ? 0.64 : hasHeat ? 0.88 : 1.0;
+
+    // 2. Courier-specific traffic congestion based on Monterrey coordinates & rush hours
+    const courierA = this.state.agents.agent_a;
+    const courierB = this.state.agents.agent_b;
+    const courierBase = this.state.agents.baseline;
+
+    const trafficA = calculateCourierTrafficSpeed(
+      courierA.lat,
+      courierA.lng,
+      this.state.elapsedMinutes,
+      weatherSpeedFactor
+    );
+    courierA.speedKmh = trafficA.speedKmh;
+    courierA.corridorName = trafficA.corridorName;
+
+    const trafficB = calculateCourierTrafficSpeed(
+      courierB.lat,
+      courierB.lng,
+      this.state.elapsedMinutes,
+      weatherSpeedFactor
+    );
+    courierB.speedKmh = trafficB.speedKmh;
+    courierB.corridorName = trafficB.corridorName;
+
+    const trafficBase = calculateCourierTrafficSpeed(
+      courierBase.lat,
+      courierBase.lng,
+      this.state.elapsedMinutes,
+      weatherSpeedFactor
+    );
+    courierBase.speedKmh = trafficBase.speedKmh;
+    courierBase.corridorName = trafficBase.corridorName;
+
+    const timeInfo = getMonterreyTimeOfDay(this.state.elapsedMinutes);
+    this.state.traffic = {
+      formattedTime: timeInfo.formattedTime,
+      isRushHour: timeInfo.isRushHour,
+      averageSpeedKmh:
+        Math.round(((trafficA.speedKmh + trafficB.speedKmh + trafficBase.speedKmh) / 3) * 10) / 10,
+      congestionLevel: trafficA.congestionLevel,
+    };
+
+    // 3. Generate new incoming orders with Kaggle distributions
+    const newOrders = this.orderStream.generateTick(
+      this.state.elapsedMinutes * 60,
+      this.state.activeEvents
+    );
+    this.state.newOrders = newOrders;
+    this.state.activeEvents = this.eventEngine.getActiveEvents();
+
+    // 4. Dispatch decisions for couriers who have available capacity
+    await this.evaluateDispatch(newOrders);
+
+    // 5. Advance physical movement & order lifecycle along real street waypoints with calibrated speeds
+    await this.stepCourierPhysics('agent_a', trafficA.speedKmPerMin);
+    await this.stepCourierPhysics('agent_b', trafficB.speedKmPerMin);
+    await this.stepCourierPhysics('baseline', trafficBase.speedKmPerMin);
+
+    // 6. Broadcast live state to SSE subscribers
+    this.subscribers.forEach((cb) => {
+      try {
+        cb(this.state);
+      } catch (_err) {}
     });
 
-    // Generate new orders and filter expired ones
-    const newOrders = generateOrders(this.state.currentTick, 2);
-    const existingOrders = this.state.orders.filter(
-      (o) => o.expireAtTick > this.state.currentTick && o.status === 'available'
-    );
-    this.state.orders = [...existingOrders, ...newOrders];
-
-    // Run decisions in parallel for all 3 agents
-    const availableOrders = [...this.state.orders];
-
-    const [decisionA, decisionB, decisionBase] = await Promise.all([
-      getAgentDecision('agent_a', availableOrders, this.state.agents.agent_a, this.state.activeEvents),
-      getAgentDecision('agent_b', availableOrders, this.state.agents.agent_b, this.state.activeEvents),
-      Promise.resolve(decideBaseline(availableOrders, this.state.agents.baseline)),
-    ]);
-
-    // Apply Agent A updates
-    this.applyAgentDecision('agent_a', decisionA.accepted, decisionA.skipped, availableOrders);
-
-    // Apply Agent B updates
-    this.applyAgentDecision('agent_b', decisionB.accepted, decisionB.skipped, availableOrders);
-
-    // Apply Baseline updates
-    this.applyAgentDecision('baseline', decisionBase.accepted, decisionBase.skipped, availableOrders);
-
-    // Persist decisions asynchronously (non-blocking)
-    this.recordDecisionAsync(decisionA, decisionB, decisionBase);
-
-    this.notify();
+    // 7. Async persistence
+    connectDB().then(async (conn) => {
+      if (conn) {
+        try {
+          await Decision.create([
+            {
+              shiftId: this.shiftId,
+              tick: this.state.tick,
+              agentId: 'agent_a',
+              accepted: this.state.decisions.agent_a.accepted.length,
+              skipped: this.state.decisions.agent_a.skipped.length,
+              reasoning: this.state.decisions.agent_a.primary_reasoning,
+              payload: this.state.decisions.agent_a,
+            },
+            {
+              shiftId: this.shiftId,
+              tick: this.state.tick,
+              agentId: 'agent_b',
+              accepted: this.state.decisions.agent_b.accepted.length,
+              skipped: this.state.decisions.agent_b.skipped.length,
+              reasoning: this.state.decisions.agent_b.primary_reasoning,
+              payload: this.state.decisions.agent_b,
+            },
+            {
+              shiftId: this.shiftId,
+              tick: this.state.tick,
+              agentId: 'baseline',
+              accepted: this.state.decisions.baseline.accepted.length,
+              skipped: this.state.decisions.baseline.skipped.length,
+              reasoning: this.state.decisions.baseline.primary_reasoning,
+              payload: this.state.decisions.baseline,
+            },
+          ]);
+        } catch (_err) {}
+      }
+    });
   }
 
-  private applyAgentDecision(
-    agentId: 'agent_a' | 'agent_b' | 'baseline',
-    acceptedIds: string[],
-    skippedIds: string[],
-    availableOrders: any[]
-  ) {
-    const courier = this.state.agents[agentId];
-    courier.skippedOrders += skippedIds.length;
+  private async evaluateDispatch(newOrders: Order[]) {
+    if (newOrders.length === 0) return;
 
-    let tickPayout = 0;
-    let tickDistance = 0;
+    const courierA = this.state.agents.agent_a;
+    const courierB = this.state.agents.agent_b;
+    const courierBase = this.state.agents.baseline;
 
-    for (const id of acceptedIds) {
-      const order = availableOrders.find((o) => o.id === id);
-      if (order) {
-        tickPayout += order.payout;
-        tickDistance += order.distanceKm;
-        courier.completedOrders += 1;
-        // Move courier to dropoff
-        courier.lat = order.dropoff.lat;
-        courier.lng = order.dropoff.lng;
-        courier.activeRoute = [order.pickup, order.dropoff];
+    // Agent A (Economist): Max capacity = 1 order in bag (selective high-yield)
+    if (courierA.carryingOrders.length < 1) {
+      const decA = await getAgentDecision('agent_a', newOrders, courierA, this.state.activeEvents);
+      this.state.decisions.agent_a = decA;
+      if (decA.accepted.length > 0) {
+        const orderId = decA.accepted[0];
+        const ord = newOrders.find((o) => o.id === orderId || o.order_id === orderId);
+        if (ord && !courierA.carryingOrders.some((o) => o.id === ord.id)) {
+          courierA.carryingOrders.push(ord);
+          await this.initCourierTask(courierA);
+        }
+      } else {
+        courierA.skippedOrders += decA.skipped.length;
       }
     }
 
-    courier.currentEarnings += tickPayout;
-    courier.totalKm = Number((courier.totalKm + tickDistance).toFixed(2));
-    courier.status = acceptedIds.length > 0 ? 'delivering' : 'idle';
-    if (acceptedIds.length === 0) {
+    // Agent B (Hustler): Max capacity = 3 orders (OR-Tools multi-drop clustering)
+    if (courierB.carryingOrders.length < 3) {
+      const decB = await getAgentDecision('agent_b', newOrders, courierB, this.state.activeEvents);
+      this.state.decisions.agent_b = decB;
+      for (const orderId of decB.accepted) {
+        if (courierB.carryingOrders.length >= 3) break;
+        const ord = newOrders.find((o) => o.id === orderId || o.order_id === orderId);
+        if (ord && !courierB.carryingOrders.some((o) => o.id === ord.id)) {
+          courierB.carryingOrders.push(ord);
+        }
+      }
+      if (courierB.carryingOrders.length > 0 && !courierB.currentTask) {
+        await this.initCourierTask(courierB);
+      }
+      courierB.skippedOrders += decB.skipped.length;
+    }
+
+    // Baseline: Max capacity = 1 (FIFO naive standard)
+    if (courierBase.carryingOrders.length < 1) {
+      const decBase = this.baselineAgent.decide(newOrders);
+      this.state.decisions.baseline = decBase;
+      if (decBase.accepted.length > 0) {
+        const orderId = decBase.accepted[0];
+        const ord = newOrders.find((o) => o.id === orderId || o.order_id === orderId);
+        if (ord && !courierBase.carryingOrders.some((o) => o.id === ord.id)) {
+          courierBase.carryingOrders.push(ord);
+          await this.initCourierTask(courierBase);
+        }
+      } else {
+        courierBase.skippedOrders += decBase.skipped.length;
+      }
+    }
+  }
+
+  private async initCourierTask(courier: CourierState) {
+    if (courier.carryingOrders.length === 0) {
+      courier.status = 'idle';
+      courier.currentTask = undefined;
       courier.activeRoute = [];
+      return;
     }
+
+    const nextOrder = courier.carryingOrders[0];
+    const target = {
+      lat: nextOrder.pickup.lat,
+      lng: nextOrder.pickup.lon || nextOrder.pickup.lng!,
+    };
+
+    courier.status = 'moving_to_pickup';
+
+    // Fetch real street-following geometry via OSRM / Monterrey road grid
+    const route = await fetchRoute({ lat: courier.lat, lng: courier.lng }, target);
+
+    // Calibrated kitchen prep wait time based on Kaggle food type (1-3 ticks)
+    const prepMin = nextOrder.prep_time_min || 10;
+    const waitTicks = Math.max(1, Math.min(3, Math.round(prepMin / 7)));
+
+    courier.currentTask = {
+      orderId: nextOrder.id || nextOrder.order_id,
+      phase: 'to_pickup',
+      target,
+      targetName: nextOrder.pickup.zone,
+      waitTicksRemaining: waitTicks,
+      waypoints: route.waypoints,
+      waypointIndex: 0,
+      totalRouteKm: route.distanceKm,
+    };
+
+    courier.activeRoute =
+      route.waypoints && route.waypoints.length > 0
+        ? route.waypoints
+        : [{ lat: courier.lat, lng: courier.lng }, target];
   }
 
-  private async recordDecisionAsync(decisionA: any, decisionB: any, decisionBase: any) {
-    try {
-      const db = await connectDB();
-      if (!db) return;
+  /**
+   * Advances courier along street waypoints tick-by-tick.
+   * Returns true if courier reached final target.
+   */
+  private advanceAlongWaypoints(
+    courier: CourierState,
+    task: CourierTask,
+    stepKm: number
+  ): boolean {
+    let remainingStepKm = stepKm;
 
-      await Decision.insertMany(
-        [
-          {
-            shiftId: this.state.shiftId,
-            tick: this.state.currentTick,
-            agentId: 'agent_a',
-            accepted: decisionA.accepted.length,
-            skipped: decisionA.skipped.length,
-            reasoning: decisionA.reasoning,
-            payload: decisionA.detailed_reasoning,
-          },
-          {
-            shiftId: this.state.shiftId,
-            tick: this.state.currentTick,
-            agentId: 'agent_b',
-            accepted: decisionB.accepted.length,
-            skipped: decisionB.skipped.length,
-            reasoning: decisionB.reasoning,
-            payload: decisionB.detailed_reasoning,
-          },
-          {
-            shiftId: this.state.shiftId,
-            tick: this.state.currentTick,
-            agentId: 'baseline',
-            accepted: decisionBase.accepted.length,
-            skipped: decisionBase.skipped.length,
-            reasoning: decisionBase.reasoning,
-            payload: { model: 'FIFO Baseline Standard' },
-          },
-        ],
-        { ordered: false }
-      );
-    } catch {
-      // Non-fatal if DB is unavailable in dev
+    if (!task.waypoints || task.waypoints.length === 0) {
+      const dist = haversineKm(courier.lat, courier.lng, task.target.lat, task.target.lng);
+      if (dist <= remainingStepKm) {
+        courier.lat = task.target.lat;
+        courier.lng = task.target.lng;
+        courier.totalKm = Math.round((courier.totalKm + dist) * 10) / 10;
+        courier.activeRoute = [];
+        return true;
+      }
+      const ratio = remainingStepKm / dist;
+      courier.lat += (task.target.lat - courier.lat) * ratio;
+      courier.lng += (task.target.lng - courier.lng) * ratio;
+      courier.totalKm = Math.round((courier.totalKm + remainingStepKm) * 10) / 10;
+      courier.activeRoute = [{ lat: courier.lat, lng: courier.lng }, task.target];
+      return false;
     }
-  }
 
-  private async persistFinalShift() {
-    try {
-      const db = await connectDB();
-      if (!db) return;
+    let idx = task.waypointIndex ?? 0;
 
-      await Shift.findOneAndUpdate(
-        { shiftId: this.state.shiftId },
-        {
-          shiftId: this.state.shiftId,
-          durationMin: Math.round(this.state.totalTicks / 60),
-          agentAEarnings: this.state.agents.agent_a.currentEarnings,
-          agentBEarnings: this.state.agents.agent_b.currentEarnings,
-          baselineEarnings: this.state.agents.baseline.currentEarnings,
-          agentAKm: this.state.agents.agent_a.totalKm,
-          agentBKm: this.state.agents.agent_b.totalKm,
-          eventsTriggered: this.state.activeEvents.length,
-        },
-        { upsert: true }
-      );
-    } catch {
-      // Non-fatal
+    while (remainingStepKm > 0.0001 && idx < task.waypoints.length) {
+      const nextWp = task.waypoints[idx];
+      const distToWp = haversineKm(courier.lat, courier.lng, nextWp.lat, nextWp.lng);
+
+      if (distToWp <= 0.002) {
+        idx++;
+        task.waypointIndex = idx;
+        continue;
+      }
+
+      if (remainingStepKm >= distToWp) {
+        // Reached this street waypoint on this step
+        courier.lat = nextWp.lat;
+        courier.lng = nextWp.lng;
+        courier.totalKm = Math.round((courier.totalKm + distToWp) * 10) / 10;
+        remainingStepKm -= distToWp;
+        idx++;
+        task.waypointIndex = idx;
+      } else {
+        // Advance partway towards waypoint along street line
+        const ratio = remainingStepKm / distToWp;
+        courier.lat += (nextWp.lat - courier.lat) * ratio;
+        courier.lng += (nextWp.lng - courier.lng) * ratio;
+        courier.totalKm = Math.round((courier.totalKm + remainingStepKm) * 10) / 10;
+        remainingStepKm = 0;
+        break;
+      }
     }
+
+    task.waypointIndex = idx;
+
+    if (idx >= task.waypoints.length) {
+      const finalDist = haversineKm(courier.lat, courier.lng, task.target.lat, task.target.lng);
+      courier.lat = task.target.lat;
+      courier.lng = task.target.lng;
+      if (finalDist > 0.001) {
+        courier.totalKm = Math.round((courier.totalKm + finalDist) * 10) / 10;
+      }
+      courier.activeRoute = [];
+      return true;
+    }
+
+    // Active route is current courier position + remaining unreached street waypoints
+    courier.activeRoute = [
+      { lat: courier.lat, lng: courier.lng },
+      ...task.waypoints.slice(idx),
+    ];
+    return false;
   }
-}
 
-// In-memory registry of active shifts attached to globalThis for Next.js dev server singleton
-const globalForShifts = globalThis as unknown as {
-  activeShifts: Map<string, ShiftEngine> | undefined;
-};
+  private async stepCourierPhysics(
+    agentKey: 'agent_a' | 'agent_b' | 'baseline',
+    stepKm: number
+  ) {
+    const courier = this.state.agents[agentKey];
+    const task = courier.currentTask;
 
-const activeShifts = globalForShifts.activeShifts ?? new Map<string, ShiftEngine>();
-globalForShifts.activeShifts = activeShifts;
+    if (!task || courier.status === 'idle') {
+      courier.activeRoute = [];
+      return;
+    }
 
-export function getOrCreateShift(
-  shiftId: string,
-  durationMin: number = 60,
-  seed: number = 42
-): ShiftEngine {
-  let engine = activeShifts.get(shiftId);
-  if (!engine) {
-    engine = new ShiftEngine(shiftId, durationMin, seed);
-    activeShifts.set(shiftId, engine);
-  }
-  return engine;
-}
+    // 1. Moving to restaurant / pickup along real street waypoints
+    if (task.phase === 'to_pickup') {
+      const arrived = this.advanceAlongWaypoints(courier, task, stepKm);
+      if (arrived) {
+        courier.status = 'waiting_at_pickup';
+        courier.activeRoute = [];
+      } else {
+        courier.status = 'moving_to_pickup';
+      }
+      return;
+    }
 
-export function getActiveShift(shiftId: string): ShiftEngine | undefined {
-  return activeShifts.get(shiftId);
-}
+    // 2. Waiting at kitchen for preparation (calibrated via Kaggle prep times)
+    if (courier.status === 'waiting_at_pickup') {
+      task.waitTicksRemaining -= 1;
+      if (task.waitTicksRemaining <= 0) {
+        // Order is ready! Switch phase to dropoff
+        const order = courier.carryingOrders.find(
+          (o) => o.id === task.orderId || o.order_id === task.orderId
+        );
+        if (order) {
+          const dropoffTarget = {
+            lat: order.dropoff.lat,
+            lng: order.dropoff.lon || order.dropoff.lng!,
+          };
+          const route = await fetchRoute({ lat: courier.lat, lng: courier.lng }, dropoffTarget);
 
-export function removeShift(shiftId: string): void {
-  const engine = activeShifts.get(shiftId);
-  if (engine) {
-    engine.stop();
-    activeShifts.delete(shiftId);
+          task.phase = 'to_dropoff';
+          task.target = dropoffTarget;
+          task.targetName = order.dropoff.zone;
+          task.waypoints = route.waypoints;
+          task.waypointIndex = 0;
+          task.totalRouteKm = route.distanceKm;
+
+          courier.status = 'delivering';
+          courier.activeRoute =
+            route.waypoints && route.waypoints.length > 0
+              ? route.waypoints
+              : [{ lat: courier.lat, lng: courier.lng }, dropoffTarget];
+        } else {
+          await this.initCourierTask(courier);
+        }
+      }
+      return;
+    }
+
+    // 3. Delivering order to customer along real street waypoints
+    if (task.phase === 'to_dropoff') {
+      const arrived = this.advanceAlongWaypoints(courier, task, stepKm);
+      if (arrived) {
+        // Order Delivered!
+        const completedIndex = courier.carryingOrders.findIndex(
+          (o) => o.id === task.orderId || o.order_id === task.orderId
+        );
+        if (completedIndex >= 0) {
+          const completedOrder = courier.carryingOrders[completedIndex];
+          courier.currentEarnings =
+            Math.round((courier.currentEarnings + completedOrder.total_pay) * 10) / 10;
+          courier.completedOrders += 1;
+          courier.carryingOrders.splice(completedIndex, 1);
+        }
+
+        // Check if there are other batched orders to deliver
+        await this.initCourierTask(courier);
+      } else {
+        courier.status = 'delivering';
+      }
+    }
   }
 }

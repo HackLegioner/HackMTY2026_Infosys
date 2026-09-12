@@ -19,7 +19,6 @@ class AgentAEconomist:
         state: Dict[str, Any],
         events: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        # Strict input validation
         if not isinstance(orders, list):
             orders = []
         if not isinstance(state, dict):
@@ -33,17 +32,18 @@ class AgentAEconomist:
         reasoning_details = []
 
         # Analyze surge influence
-        surge_active = any(ev.get("type") == "surge" for ev in events)
+        surge_active = any(ev.get("type") == "surge" or ev.get("event_type") == "surge" for ev in events)
 
         for ord_item in orders:
-            order_id = ord_item.get("id")
-            payout = float(ord_item.get("payout", 0.0))
-            dist_km = max(float(ord_item.get("distanceKm", 1.0)), 0.5)
+            order_id = ord_item.get("id") or ord_item.get("order_id", "unknown")
+            payout = float(ord_item.get("payout") or ord_item.get("total_pay", 0.0))
+            dist_km = max(float(ord_item.get("distanceKm") or ord_item.get("estimated_distance_km", 1.0)), 0.5)
 
             efficiency = payout / dist_km
-            threshold = self.min_efficiency_threshold * (1.2 if surge_active else 1.0)
+            threshold = self.min_efficiency_threshold * (1.3 if surge_active else 1.0)
 
-            if efficiency >= threshold:
+            # Only accept 1 high-value order at a time (selective philosophy)
+            if efficiency >= threshold and len(accepted) < 1:
                 accepted.append(order_id)
                 earnings_sum += payout
                 reasoning_details.append({
@@ -64,19 +64,19 @@ class AgentAEconomist:
                 })
 
         summary = (
-            f"Economist: Accepted {len(accepted)} orders meeting ≥{self.min_efficiency_threshold:.1f} MXN/km threshold. "
-            f"Rejected {len(skipped)} low-yield orders."
+            f"Economist: Accepted {len(accepted)} high-efficiency order(s) (≥{self.min_efficiency_threshold:.1f} MXN/km). "
+            f"Skipped {len(skipped)} lower-margin candidates."
         )
 
         return {
             "agent_id": "agent_a",
             "accepted": accepted,
             "skipped": skipped,
-            "earnings_total": earnings_sum,
+            "earnings_total": round(earnings_sum, 2),
             "reasoning": summary,
             "detailed_reasoning": {
-                "strategy": "profit_density_dqn",
-                "surge_adapted": surge_active,
+                "strategy": "dqn_profit_density",
+                "surge_multiplier_applied": surge_active,
                 "decisions": reasoning_details,
             },
         }
