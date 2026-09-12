@@ -27,8 +27,7 @@ export const MapView: React.FC<MapViewProps> = ({ shiftState }) => {
       <div className="absolute top-4 left-4 z-10 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-300">
         📍 Monterrey Live Grid — Lat: 25.6692, Lng: -100.3099
       </div>
-      
-      {/* Map visualization canvas placeholder */}
+
       <div className="w-full h-full flex flex-col items-center justify-center p-4">
         <div className="grid grid-cols-3 gap-4 w-full max-w-2xl text-center">
           <div className="p-3 bg-blue-950/40 border border-blue-500/30 rounded-lg">
@@ -55,10 +54,10 @@ export const MapView: React.FC<MapViewProps> = ({ shiftState }) => {
           <div className="mt-4 flex gap-2">
             {shiftState.activeEvents.map((ev) => (
               <span
-                key={ev.id}
+                key={ev.id || ev.event_id}
                 className="px-2.5 py-1 text-xs rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse"
               >
-                ⚠️ {ev.type.toUpperCase()}: {ev.description || 'Active'}
+                ⚠️ {(ev.type || ev.event_type || 'CRISIS').toUpperCase()}: {ev.description || 'Active'}
               </span>
             ))}
           </div>
