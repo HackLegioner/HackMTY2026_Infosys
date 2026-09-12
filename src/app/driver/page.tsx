@@ -164,6 +164,12 @@ export default function DriverDashboardPage() {
     },
   ];
 
+  // Total funcional de pedidos entregados en el día (empieza en 0)
+  const totalDeliveredToday = driversList.reduce((sum, d) => sum + d.deliveriesToday, 0);
+  const deliveryGrowth = totalDeliveredToday === 0
+    ? '+0.0%'
+    : `+${(totalDeliveredToday * 4.5).toFixed(1)}%`;
+
   const filteredDrivers = driversList.filter(
     (d) =>
       d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -245,18 +251,18 @@ export default function DriverDashboardPage() {
 
         {/* Top 4 KPI Cards Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* KPI 1 */}
+          {/* KPI 1: Entregas Hoy (Funcional iniciando en 0) */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 flex flex-col justify-between shadow-sm h-28">
             <div className="flex justify-between items-start">
               <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
                 Entregas Hoy
               </span>
               <span className="text-[11px] font-mono font-bold text-[#09090B] dark:text-zinc-200">
-                +14.2%
+                {deliveryGrowth}
               </span>
             </div>
             <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
-              342
+              {totalDeliveredToday}
             </div>
           </div>
 
