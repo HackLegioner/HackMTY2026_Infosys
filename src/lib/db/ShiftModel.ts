@@ -11,7 +11,9 @@ const ShiftSchema = new Schema(
     baselineEarnings: { type: Number, default: 0 },
     agentAKm: { type: Number, default: 0 },
     agentBKm: { type: Number, default: 0 },
+    baselineKm: { type: Number, default: 0 },
     eventsTriggered: { type: Number, default: 0 },
+    status: { type: String, enum: ['active', 'completed', 'stopped'], default: 'active' },
   },
   { timestamps: true }
 );

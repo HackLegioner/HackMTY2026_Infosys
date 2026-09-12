@@ -2,12 +2,12 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit } from '@/lib/security/rateLimiter';
 import { getAuditTier } from '@/lib/security/auth';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith('/api')) {
     const ip = request.ip || request.headers.get('x-forwarded-for') || '127.0.0.1';
-    const rateCheck = checkRateLimit(ip, { limit: 120, windowMs: 60 * 1000 });
+    const rateCheck = await checkRateLimit(ip, { limit: 120, windowMs: 60 * 1000 });
 
     if (!rateCheck.allowed) {
       return new NextResponse(

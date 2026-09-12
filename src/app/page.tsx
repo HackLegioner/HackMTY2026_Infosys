@@ -99,7 +99,7 @@ export default function Home() {
             <span>🛵</span> Panel Repartidores
           </Link>
           <Link
-            href="/audit"
+            href={activeShiftId ? `/audit?shiftId=${activeShiftId}` : '/audit'}
             className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-medium transition border border-slate-700"
           >
             🔍 Audit Panel

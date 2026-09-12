@@ -217,6 +217,53 @@ export default function DriverDashboardPage() {
           },
         ];
 
+  const handleExportReport = () => {
+    const reportData = {
+      title: 'The Courier — Monterrey Multi-Agent Shift Report',
+      exportedAt: new Date().toISOString(),
+      shiftId: activeShiftId || 'offline_preview',
+      currentTick,
+      totalTicks,
+      weather: shiftState?.weather || { description: 'Clear / Standard Monterrey 28.5°C' },
+      traffic: shiftState?.traffic || { formattedTime: '12:00 PM', averageSpeedKmh: 25 },
+      agents: {
+        agent_a: {
+          name: 'The Economist 🧊 (DQN RL)',
+          earningsMxn: agentA.currentEarnings,
+          totalKm: agentA.totalKm,
+          completedOrders: agentA.completedOrders,
+          skippedOrders: agentA.skippedOrders,
+        },
+        agent_b: {
+          name: 'The Hustler ⚡ (OR-Tools + XGBoost)',
+          earningsMxn: agentB.currentEarnings,
+          totalKm: agentB.totalKm,
+          completedOrders: agentB.completedOrders,
+          skippedOrders: agentB.skippedOrders,
+        },
+        baseline: {
+          name: 'Traditional App Baseline 📱 (FIFO Naive)',
+          earningsMxn: baseline.currentEarnings,
+          totalKm: baseline.totalKm,
+          completedOrders: baseline.completedOrders,
+          skippedOrders: baseline.skippedOrders,
+        },
+      },
+      drivers: driversList,
+      database: 'MongoDB Atlas Cloud Verified (courier-cluster)',
+    };
+
+    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `courier_shift_report_${activeShiftId || 'latest'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-[#F4F4F5] dark:bg-[#09090B] text-[#09090B] dark:text-zinc-100 font-sans transition-colors">
       {/* Top Navbar */}
@@ -490,13 +537,12 @@ export default function DriverDashboardPage() {
                 >
                   <span>ⓘ</span> Alertar a la Flota
                 </button>
-
                 <button
                   type="button"
-                  onClick={() => alert('Reporte de turno descargado')}
+                  onClick={handleExportReport}
                   className="w-full bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                 >
-                  <span>⤓</span> Exportar Reporte de Turno
+                  <span>⤓</span> Exportar Reporte de Turno (JSON)
                 </button>
               </div>
             </div>

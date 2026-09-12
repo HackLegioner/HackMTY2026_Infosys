@@ -61,7 +61,12 @@ export class ShiftEngine {
   private eventEngine: EventEngine;
   private baselineAgent: BaselineAgent;
   public timer: NodeJS.Timeout | null = null;
+  public historicalDecisions: Array<any> = [];
   private subscribers: Array<(state: ShiftState) => void> = [];
+
+  public getState(): ShiftState {
+    return this.state;
+  }
 
   constructor(shiftId: string, durationMin: number = 60, seed: number = 42) {
     this.shiftId = shiftId;
@@ -248,6 +253,27 @@ export class ShiftEngine {
         cb(this.state);
       } catch (_err) {}
     });
+
+    connectDB().then(async (conn) => {
+      if (conn) {
+        try {
+          await Shift.updateOne(
+            { shiftId: this.shiftId },
+            {
+              $set: {
+                agentAEarnings: this.state.agents.agent_a.currentEarnings,
+                agentBEarnings: this.state.agents.agent_b.currentEarnings,
+                baselineEarnings: this.state.agents.baseline.currentEarnings,
+                agentAKm: this.state.agents.agent_a.totalKm,
+                agentBKm: this.state.agents.agent_b.totalKm,
+                baselineKm: this.state.agents.baseline.totalKm,
+                status: 'stopped',
+              },
+            }
+          );
+        } catch (_err) {}
+      }
+    });
   }
 
   public triggerEvent(presetIndex?: number) {
@@ -339,38 +365,63 @@ export class ShiftEngine {
       } catch (_err) {}
     });
 
-    // 7. Async persistence
+    // 7. Async persistence & in-memory buffer
+    const decisionRecords = [
+      {
+        shiftId: this.shiftId,
+        tick: this.state.tick,
+        agentId: 'agent_a',
+        accepted: this.state.decisions.agent_a.accepted.length,
+        skipped: this.state.decisions.agent_a.skipped.length,
+        reasoning: this.state.decisions.agent_a.primary_reasoning,
+        payload: this.state.decisions.agent_a,
+      },
+      {
+        shiftId: this.shiftId,
+        tick: this.state.tick,
+        agentId: 'agent_b',
+        accepted: this.state.decisions.agent_b.accepted.length,
+        skipped: this.state.decisions.agent_b.skipped.length,
+        reasoning: this.state.decisions.agent_b.primary_reasoning,
+        payload: this.state.decisions.agent_b,
+      },
+      {
+        shiftId: this.shiftId,
+        tick: this.state.tick,
+        agentId: 'baseline',
+        accepted: this.state.decisions.baseline.accepted.length,
+        skipped: this.state.decisions.baseline.skipped.length,
+        reasoning: this.state.decisions.baseline.primary_reasoning,
+        payload: this.state.decisions.baseline,
+      },
+    ];
+
+    this.historicalDecisions.push(...decisionRecords);
+    if (this.historicalDecisions.length > 300) {
+      this.historicalDecisions.splice(0, this.historicalDecisions.length - 300);
+    }
+
     connectDB().then(async (conn) => {
       if (conn) {
         try {
-          await Decision.create([
-            {
-              shiftId: this.shiftId,
-              tick: this.state.tick,
-              agentId: 'agent_a',
-              accepted: this.state.decisions.agent_a.accepted.length,
-              skipped: this.state.decisions.agent_a.skipped.length,
-              reasoning: this.state.decisions.agent_a.primary_reasoning,
-              payload: this.state.decisions.agent_a,
-            },
-            {
-              shiftId: this.shiftId,
-              tick: this.state.tick,
-              agentId: 'agent_b',
-              accepted: this.state.decisions.agent_b.accepted.length,
-              skipped: this.state.decisions.agent_b.skipped.length,
-              reasoning: this.state.decisions.agent_b.primary_reasoning,
-              payload: this.state.decisions.agent_b,
-            },
-            {
-              shiftId: this.shiftId,
-              tick: this.state.tick,
-              agentId: 'baseline',
-              accepted: this.state.decisions.baseline.accepted.length,
-              skipped: this.state.decisions.baseline.skipped.length,
-              reasoning: this.state.decisions.baseline.primary_reasoning,
-              payload: this.state.decisions.baseline,
-            },
+          await Promise.all([
+            Decision.create(decisionRecords),
+            Shift.updateOne(
+              { shiftId: this.shiftId },
+              {
+                $set: {
+                  agentAEarnings: this.state.agents.agent_a.currentEarnings,
+                  agentBEarnings: this.state.agents.agent_b.currentEarnings,
+                  baselineEarnings: this.state.agents.baseline.currentEarnings,
+                  agentAKm: this.state.agents.agent_a.totalKm,
+                  agentBKm: this.state.agents.agent_b.totalKm,
+                  baselineKm: this.state.agents.baseline.totalKm,
+                  eventsTriggered: this.state.activeEvents.length,
+                  status: this.state.tick >= this.state.totalMinutes ? 'completed' : 'active',
+                },
+              },
+              { upsert: true }
+            ),
           ]);
         } catch (_err) {}
       }
