@@ -44,10 +44,10 @@ export default function DriverDashboardPage() {
 
   // Al finalizar la simulación por llegar al límite de ticks, limpiar overrides
   useEffect(() => {
-    if (shiftState && shiftState.totalTicks > 0 && shiftState.currentTick >= shiftState.totalTicks) {
+    if (shiftState && totalTicks > 0 && currentTick >= totalTicks) {
       setManualOverrides({});
     }
-  }, [shiftState?.currentTick, shiftState?.totalTicks]);
+  }, [currentTick, totalTicks, shiftState]);
 
   // Toggle live simulation
   const handleToggleSimulation = async () => {
@@ -98,7 +98,7 @@ export default function DriverDashboardPage() {
   // 3. Cuando termine la simulación (!isSimulationRunning): Todos regresan a "Disponible"
   const resolveCourierStatus = (
     courierId: string,
-    courier: { status?: 'idle' | 'delivering' | 'rerouting'; activeRoute?: any[] }
+    courier: { status?: string; activeRoute?: any[] }
   ) => {
     // Si el usuario aplicó un override manual para prueba o demo
     if (manualOverrides[courierId]) {
@@ -115,12 +115,12 @@ export default function DriverDashboardPage() {
     }
 
     // Durante la simulación en curso:
-    // Si está aceptando órdenes y entregando -> "En Ruta"
-    if (courier.status === 'delivering') {
+    // Si está realizando tareas activas (moving_to_pickup, waiting_at_pickup, delivering) -> "En Ruta"
+    if (courier.status && courier.status !== 'idle') {
       return { status: 'En Ruta', statusType: 'en_ruta' as const };
     }
 
-    // Si no está aceptando órdenes (idle) -> "Disponible"
+    // Si no está realizando tareas (idle) -> "Disponible"
     return { status: 'Disponible', statusType: 'disponible' as const };
   };
 
@@ -293,7 +293,7 @@ export default function DriverDashboardPage() {
               {loading
                 ? 'Cargando...'
                 : isSimulationRunning
-                ? `⏹ Detener Turno (Tick ${shiftState?.currentTick || 0})`
+                ? `⏹ Detener Turno (Tick ${currentTick})`
                 : '▶ Simular Flota'}
             </button>
           </div>
