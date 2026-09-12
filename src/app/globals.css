@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0A0E1A;
+  --foreground: #F8FAFC;
+  --agent-a: #3B82F6;
+  --agent-b: #10B981;
+  --baseline: #6B7280;
+  --surge: #F59E0B;
+  --closure: #EF4444;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  min-height: 100vh;
+}

@@ -1,0 +1,39 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Shift {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  shiftId          String   @unique
+  startedAt        DateTime @default(now())
+  durationMin      Int?
+  seed             Int?
+  agentAEarnings   Float    @default(0)
+  agentBEarnings   Float    @default(0)
+  baselineEarnings Float    @default(0)
+  agentAKm         Float    @default(0)
+  agentBKm         Float    @default(0)
+  eventsTriggered  Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Decision {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  shiftId   String
+  tick      Int
+  agentId   String
+  accepted  Int      @default(0)
+  skipped   Int      @default(0)
+  reasoning String?
+  payload   Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shiftId, agentId])
+}
