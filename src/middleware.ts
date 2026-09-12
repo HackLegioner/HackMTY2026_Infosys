@@ -1,5 +1,4 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/request';
+import { NextResponse, type NextRequest } from 'next/server';
 import { checkRateLimit } from './lib/security/rateLimiter';
 import { getAuditTier } from './lib/security/auth';
 

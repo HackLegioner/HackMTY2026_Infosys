@@ -56,13 +56,13 @@ export class ShiftEngine {
   }
 
   private notify() {
-    for (const sub of this.subscribers) {
+    this.subscribers.forEach((sub) => {
       try {
         sub(this.state);
       } catch (err) {
         console.error('[ShiftEngine] Subscriber notification error:', err);
       }
-    }
+    });
   }
 
   public triggerEvent(presetIndex: number = 0): DisasterEvent {
