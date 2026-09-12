@@ -30,13 +30,29 @@ export default function DriverDashboardPage() {
     }
   }, [activeShiftId]);
 
+  // Estado de simulación activa (corriendo ticks > 0 y dentro del límite total)
+  const isSimulationRunning = Boolean(
+    activeShiftId &&
+    shiftState &&
+    shiftState.currentTick > 0 &&
+    shiftState.totalTicks > 0 &&
+    shiftState.currentTick < shiftState.totalTicks
+  );
+
+  // Al finalizar la simulación por llegar al límite de ticks, limpiar overrides
+  useEffect(() => {
+    if (shiftState && shiftState.totalTicks > 0 && shiftState.currentTick >= shiftState.totalTicks) {
+      setManualOverrides({});
+    }
+  }, [shiftState?.currentTick, shiftState?.totalTicks]);
+
   // Toggle live simulation
   const handleToggleSimulation = async () => {
     setManualOverrides({});
-    if (!activeShiftId) {
+    if (!isSimulationRunning) {
       const res = await startShift(60, 42);
       if (res) setActiveShiftId(res.shiftId);
-    } else {
+    } else if (activeShiftId) {
       await stopShift(activeShiftId);
       setActiveShiftId(null);
     }
@@ -70,19 +86,18 @@ export default function DriverDashboardPage() {
     activeRoute: [],
   };
 
-  // Estado de simulación activa (corriendo ticks > 0)
-  const isSimulationRunning = Boolean(activeShiftId && shiftState && shiftState.currentTick > 0);
-
   // Determinar estado de cada repartidor:
   // 1. En un principio: Todos en "Disponible"
-  // 2. Al empezar simulación: Cambia a "En Ruta"
-  //    A MENOS QUE: el repartidor no esté aceptando órdenes (status === 'idle') -> se queda en "Disponible"
-  //    Y cuando acepte órdenes de nuevo (status === 'delivering') -> regresa a "En Ruta"
+  // 2. Durante la simulación:
+  //    - Si el repartidor está aceptando órdenes (status === 'delivering') -> se cambia a "En Ruta"
+  //    - A MENOS QUE: el repartidor no esté aceptando órdenes (status === 'idle') -> se queda en "Disponible"
+  //    - Y cuando vuelva a aceptar órdenes -> regresa a "En Ruta"
+  // 3. Cuando termine la simulación (!isSimulationRunning): Todos regresan a "Disponible"
   const resolveCourierStatus = (
     courierId: string,
     courier: { status?: 'idle' | 'delivering' | 'rerouting'; activeRoute?: any[] }
   ) => {
-    // Si el usuario aplicó override manual de prueba
+    // Si el usuario aplicó un override manual para prueba o demo
     if (manualOverrides[courierId]) {
       const overrideType = manualOverrides[courierId];
       return {
@@ -91,18 +106,18 @@ export default function DriverDashboardPage() {
       };
     }
 
-    // Inicialmente todos están en Disponible
+    // Al inicio O cuando termine la simulación: Todos regresan a "Disponible"
     if (!isSimulationRunning) {
       return { status: 'Disponible', statusType: 'disponible' as const };
     }
 
-    // Durante la simulación:
-    // Si está aceptando órdenes (delivering) -> En Ruta
+    // Durante la simulación en curso:
+    // Si está aceptando órdenes y entregando -> "En Ruta"
     if (courier.status === 'delivering') {
       return { status: 'En Ruta', statusType: 'en_ruta' as const };
     }
 
-    // Si no está aceptando órdenes (idle) -> Disponible
+    // Si no está aceptando órdenes (idle) -> "Disponible"
     return { status: 'Disponible', statusType: 'disponible' as const };
   };
 
@@ -221,8 +236,8 @@ export default function DriverDashboardPage() {
             >
               {loading
                 ? 'Cargando...'
-                : activeShiftId
-                ? '⏹ Detener Turno'
+                : isSimulationRunning
+                ? `⏹ Detener Turno (Tick ${shiftState?.currentTick || 0})`
                 : '▶ Simular Flota'}
             </button>
           </div>

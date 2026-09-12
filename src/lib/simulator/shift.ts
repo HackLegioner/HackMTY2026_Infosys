@@ -92,6 +92,18 @@ export class ShiftEngine {
       this.intervalTimer = null;
     }
     this.isRunning = false;
+
+    // Regresar todos los repartidores al estado idle (Disponible) al terminar la simulación
+    if (this.state && this.state.agents) {
+      this.state.agents.agent_a.status = 'idle';
+      this.state.agents.agent_a.activeRoute = [];
+      this.state.agents.agent_b.status = 'idle';
+      this.state.agents.agent_b.activeRoute = [];
+      this.state.agents.baseline.status = 'idle';
+      this.state.agents.baseline.activeRoute = [];
+    }
+
+    this.notify();
   }
 
   private async tick(): Promise<void> {
