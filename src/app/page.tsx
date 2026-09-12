@@ -65,6 +65,12 @@ export default function Home() {
 
         <div className="flex items-center space-x-3">
           <Link
+            href="/driver"
+            className="px-3 py-1.5 text-xs bg-zinc-850 hover:bg-zinc-750 text-zinc-200 rounded font-medium transition border border-zinc-700"
+          >
+            🛵 Panel Repartidores
+          </Link>
+          <Link
             href="/audit"
             className="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-medium transition border border-slate-700"
           >

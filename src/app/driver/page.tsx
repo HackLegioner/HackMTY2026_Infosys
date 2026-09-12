@@ -1,0 +1,505 @@
+'use client';
+
+import React, { useState } from 'react';
+import TopNavbar from '@/components/TopNavbar';
+import RouteNetworkMap from '@/components/dashboard/RouteNetworkMap';
+import VehicleDonutChart from '@/components/dashboard/VehicleDonutChart';
+import { useShiftControl } from '@/hooks/useShiftControl';
+import { useShiftStream } from '@/hooks/useShiftStream';
+
+export default function DriverDashboardPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeShiftId, setActiveShiftId] = useState<string | null>(null);
+  const { startShift, stopShift, loading } = useShiftControl();
+  const { state: shiftState } = useShiftStream(activeShiftId);
+
+  // Toggle live simulation
+  const handleToggleSimulation = async () => {
+    if (!activeShiftId) {
+      const res = await startShift(60, 42);
+      if (res) setActiveShiftId(res.shiftId);
+    } else {
+      await stopShift(activeShiftId);
+      setActiveShiftId(null);
+    }
+  };
+
+  // Courier agent values (mock defaults or live simulation sync)
+  const agentA = shiftState?.agents.agent_a || {
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+  };
+
+  const agentB = shiftState?.agents.agent_b || {
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+  };
+
+  const baseline = shiftState?.agents.baseline || {
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+  };
+
+  // Drivers Table Data
+  const driversList = [
+    {
+      id: 'REP-4091',
+      name: 'Agent A — The Economist',
+      zone: 'Norte Centro',
+      vehicle: 'Moto',
+      deliveriesToday: agentA.completedOrders > 0 ? 14 + agentA.completedOrders : 14,
+      status: 'En Ruta',
+      statusType: 'en_ruta',
+    },
+    {
+      id: 'REP-2104',
+      name: 'Agent B — The Hustler',
+      zone: 'San Isidro',
+      vehicle: 'Moto',
+      deliveriesToday: agentB.completedOrders > 0 ? 12 + agentB.completedOrders : 12,
+      status: 'Disponible',
+      statusType: 'disponible',
+    },
+    {
+      id: 'REP-3301',
+      name: 'Traditional App Baseline',
+      zone: 'Surco',
+      vehicle: 'Moto',
+      deliveriesToday: baseline.completedOrders > 0 ? 19 + baseline.completedOrders : 19,
+      status: 'Disponible',
+      statusType: 'disponible',
+    },
+  ];
+
+  const filteredDrivers = driversList.filter(
+    (d) =>
+      d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      d.zone.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Recent Orders Data
+  const recentOrders = [
+    {
+      id: 'ORD-2391',
+      destination: 'Av. Javier Prado Este 2401',
+      assignedTime: '14:32',
+      courier: 'Carlos Mendoza',
+      amount: '$24.50',
+    },
+    {
+      id: 'ORD-9910',
+      destination: 'Calle Las Camelias 432, San Isidro',
+      assignedTime: '14:35',
+      courier: 'Sofía Altamirano',
+      amount: '$18.00',
+    },
+    {
+      id: 'ORD-4491',
+      destination: 'Av. Benavides 1840, Miraflores',
+      assignedTime: '14:41',
+      courier: 'Mateo Ruiz',
+      amount: '$45.20',
+    },
+    {
+      id: 'ORD-1049',
+      destination: 'Jr. Centenario 105, Barranco',
+      assignedTime: '14:48',
+      courier: 'Sin Asignar',
+      amount: '$12.90',
+    },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F4F4F5] dark:bg-[#09090B] text-[#09090B] dark:text-zinc-100 font-sans transition-colors">
+      {/* Top Navbar */}
+      <TopNavbar showBrand={true} />
+
+      {/* Main Container */}
+      <main className="max-w-[1600px] mx-auto px-6 sm:px-10 py-8 space-y-6">
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#09090B] dark:text-zinc-100 tracking-tight">
+              Control de Repartidores
+            </h1>
+            <p className="text-xs text-[#71717A] dark:text-zinc-400 mt-1">
+              Monitoreo operativo y despacho de flota en tiempo real.
+            </p>
+          </div>
+
+          {/* Status Badge */}
+          <div className="flex items-center gap-3">
+            <div className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-[#E4E4E7] dark:border-zinc-800 text-[11px] font-bold font-mono tracking-wider text-[#09090B] dark:text-zinc-100 flex items-center gap-2 shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-[#09090B] dark:bg-emerald-400 animate-pulse" />
+              <span>SISTEMA ACTIVO</span>
+            </div>
+
+            {/* Quick Simulation Trigger button */}
+            <button
+              onClick={handleToggleSimulation}
+              disabled={loading}
+              className="text-xs px-3 py-1.5 bg-[#09090B] dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-md font-semibold hover:opacity-85 transition"
+            >
+              {loading
+                ? 'Cargando...'
+                : activeShiftId
+                ? '⏹ Detener Turno'
+                : '▶ Simular Flota'}
+            </button>
+          </div>
+        </div>
+
+        {/* Top 4 KPI Cards Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* KPI 1 */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 flex flex-col justify-between shadow-sm h-28">
+            <div className="flex justify-between items-start">
+              <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
+                Entregas Hoy
+              </span>
+              <span className="text-[11px] font-mono font-bold text-[#09090B] dark:text-zinc-200">
+                +14.2%
+              </span>
+            </div>
+            <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+              342
+            </div>
+          </div>
+
+          {/* KPI 2 */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 flex flex-col justify-between shadow-sm h-28">
+            <div className="flex justify-between items-start">
+              <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
+                Repartidores Activos
+              </span>
+              <span className="text-[11px] font-mono font-bold text-[#09090B] dark:text-zinc-200">
+                96%
+              </span>
+            </div>
+            <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+              48 / 50
+            </div>
+          </div>
+
+          {/* KPI 3 */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 flex flex-col justify-between shadow-sm h-28">
+            <div className="flex justify-between items-start">
+              <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
+                Tiempo Promedio de Entrega
+              </span>
+              <span className="text-[11px] font-mono font-bold text-[#09090B] dark:text-zinc-200">
+                -1.8 min
+              </span>
+            </div>
+            <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+              22 min
+            </div>
+          </div>
+
+          {/* KPI 4 (Emphasized dark border) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border-2 border-[#09090B] dark:border-zinc-400 p-5 flex flex-col justify-between shadow-sm h-28">
+            <div className="flex justify-between items-start">
+              <span className="text-xs text-[#71717A] dark:text-zinc-400 font-medium">
+                Incidencias Críticas
+              </span>
+              <span className="text-[11px] font-semibold text-[#09090B] dark:text-zinc-200">
+                Atendidas
+              </span>
+            </div>
+            <div className="text-3xl font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+              03
+            </div>
+          </div>
+        </div>
+
+        {/* 3-Column Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Left Column: Agent Cards (3 cols on desktop) */}
+          <div className="lg:col-span-3 space-y-5">
+            {/* Agent A Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                  Agent A — The Economist
+                </h3>
+                <span className="text-xs text-[#71717A] dark:text-zinc-400">MXN</span>
+              </div>
+              <div className="text-2xl font-mono font-bold text-[#09090B] dark:text-zinc-100">
+                ${agentA.currentEarnings}
+              </div>
+              <div className="grid grid-cols-2 gap-y-2 text-[11px] pt-1 border-t border-[#E4E4E7] dark:border-zinc-800 text-[#71717A] dark:text-zinc-400">
+                <div>
+                  Distance:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentA.totalKm.toFixed(1)} km
+                  </span>
+                </div>
+                <div>
+                  Orders Done:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentA.completedOrders}
+                  </span>
+                </div>
+                <div>
+                  Skipped:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentA.skippedOrders}
+                  </span>
+                </div>
+                <div>
+                  Avg Rate:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    ${agentA.totalKm > 0 ? (agentA.currentEarnings / agentA.totalKm).toFixed(0) : 0}/km
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Agent B Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                  Agent B — The Hustler
+                </h3>
+                <span className="text-xs text-[#71717A] dark:text-zinc-400">MXN</span>
+              </div>
+              <div className="text-2xl font-mono font-bold text-[#09090B] dark:text-zinc-100">
+                ${agentB.currentEarnings}
+              </div>
+              <div className="grid grid-cols-2 gap-y-2 text-[11px] pt-1 border-t border-[#E4E4E7] dark:border-zinc-800 text-[#71717A] dark:text-zinc-400">
+                <div>
+                  Distance:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentB.totalKm.toFixed(1)} km
+                  </span>
+                </div>
+                <div>
+                  Orders Done:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentB.completedOrders}
+                  </span>
+                </div>
+                <div>
+                  Skipped:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {agentB.skippedOrders}
+                  </span>
+                </div>
+                <div>
+                  Avg Rate:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    ${agentB.totalKm > 0 ? (agentB.currentEarnings / agentB.totalKm).toFixed(0) : 0}/km
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Baseline Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                  Traditional App Baseline
+                </h3>
+                <span className="text-xs text-[#71717A] dark:text-zinc-400">MXN</span>
+              </div>
+              <div className="text-2xl font-mono font-bold text-[#09090B] dark:text-zinc-100">
+                ${baseline.currentEarnings}
+              </div>
+              <div className="grid grid-cols-2 gap-y-2 text-[11px] pt-1 border-t border-[#E4E4E7] dark:border-zinc-800 text-[#71717A] dark:text-zinc-400">
+                <div>
+                  Distance:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {baseline.totalKm.toFixed(1)} km
+                  </span>
+                </div>
+                <div>
+                  Orders Done:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {baseline.completedOrders}
+                  </span>
+                </div>
+                <div>
+                  Skipped:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    {baseline.skippedOrders}
+                  </span>
+                </div>
+                <div>
+                  Avg Rate:{' '}
+                  <span className="font-mono text-[#09090B] dark:text-zinc-200 font-semibold">
+                    ${baseline.totalKm > 0 ? (baseline.currentEarnings / baseline.totalKm).toFixed(0) : 0}/km
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Center Column: Tables (6 cols on desktop) */}
+          <div className="lg:col-span-6 space-y-5">
+            {/* Table 1: Repartidores Activos */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                    Repartidores Activos
+                  </h3>
+                  <p className="text-xs text-[#71717A] dark:text-zinc-400">
+                    Flota de reparto en operaciones durante el turno actual.
+                  </p>
+                </div>
+
+                {/* Filter input */}
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-[#71717A]">
+                    🔍
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Filtrar repartidores..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-7 pr-3 py-1 text-xs rounded-md bg-[#F4F4F5] dark:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-400 w-44"
+                  />
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-[#E4E4E7] dark:border-zinc-800 text-[10px] uppercase font-bold text-[#71717A] tracking-wider">
+                      <th className="pb-2.5 font-semibold">REPARTIDOR</th>
+                      <th className="pb-2.5 font-semibold">ZONA ASIGNADA</th>
+                      <th className="pb-2.5 font-semibold">VEHÍCULO</th>
+                      <th className="pb-2.5 font-semibold">ENTREGAS (HOY)</th>
+                      <th className="pb-2.5 font-semibold text-right">ESTADO</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E4E4E7]/60 dark:divide-zinc-800/60">
+                    {filteredDrivers.map((driver) => (
+                      <tr key={driver.id} className="hover:bg-[#F4F4F5]/50 dark:hover:bg-zinc-800/30 transition">
+                        <td className="py-3">
+                          <div className="font-semibold text-[#09090B] dark:text-zinc-100 text-xs">
+                            {driver.name}
+                          </div>
+                          <div className="text-[10px] font-mono text-[#71717A]">
+                            {driver.id}
+                          </div>
+                        </td>
+                        <td className="py-3 text-xs text-[#09090B] dark:text-zinc-300">
+                          {driver.zone}
+                        </td>
+                        <td className="py-3 text-xs text-[#71717A] dark:text-zinc-400 flex items-center gap-1">
+                          <span className="text-[11px]">⊗</span> {driver.vehicle}
+                        </td>
+                        <td className="py-3 font-mono font-medium text-[#09090B] dark:text-zinc-200">
+                          {driver.deliveriesToday}
+                        </td>
+                        <td className="py-3 text-right">
+                          {driver.statusType === 'en_ruta' ? (
+                            <span className="px-2.5 py-1 rounded bg-[#09090B] text-white dark:bg-zinc-100 dark:text-zinc-900 text-[10px] font-semibold">
+                              {driver.status}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 rounded bg-white dark:bg-zinc-900 border border-[#09090B]/30 dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-[10px] font-semibold">
+                              {driver.status}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Table 2: Pedidos Recientes & Despacho */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                  Pedidos Recientes & Despacho
+                </h3>
+                <p className="text-xs text-[#71717A] dark:text-zinc-400">
+                  Últimas órdenes en curso asignadas o en espera.
+                </p>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-[#E4E4E7] dark:border-zinc-800 text-[10px] uppercase font-bold text-[#71717A] tracking-wider">
+                      <th className="pb-2.5 font-semibold">ID PEDIDO</th>
+                      <th className="pb-2.5 font-semibold">DIRECCIÓN DESTINO</th>
+                      <th className="pb-2.5 font-semibold">H. ASIGNACIÓN</th>
+                      <th className="pb-2.5 font-semibold">REPARTIDOR</th>
+                      <th className="pb-2.5 font-semibold text-right">VALOR</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E4E4E7]/60 dark:divide-zinc-800/60 font-mono text-xs">
+                    {recentOrders.map((order) => (
+                      <tr key={order.id} className="hover:bg-[#F4F4F5]/50 dark:hover:bg-zinc-800/30 transition">
+                        <td className="py-3 font-semibold text-[#09090B] dark:text-zinc-100">
+                          {order.id}
+                        </td>
+                        <td className="py-3 font-sans text-xs text-[#09090B] dark:text-zinc-300">
+                          {order.destination}
+                        </td>
+                        <td className="py-3 text-xs text-[#71717A] dark:text-zinc-400">
+                          {order.assignedTime}
+                        </td>
+                        <td className="py-3 font-sans text-xs text-[#09090B] dark:text-zinc-200">
+                          {order.courier}
+                        </td>
+                        <td className="py-3 text-right font-bold text-[#09090B] dark:text-zinc-100">
+                          {order.amount}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Operative Actions, Map, Vehicles (3 cols on desktop) */}
+          <div className="lg:col-span-3 space-y-5">
+            {/* Card 1: Acciones Operativas */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 shadow-sm space-y-3">
+              <h3 className="text-sm font-bold text-[#09090B] dark:text-zinc-100">
+                Acciones Operativas
+              </h3>
+              
+              <div className="space-y-2.5 pt-1">
+                <button className="w-full bg-[#09090B] hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-semibold py-2.5 rounded-lg transition shadow-sm">
+                  + Asignar Nuevo Pedido
+                </button>
+
+                <button className="w-full bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm">
+                  <span>ⓘ</span> Alertar a la Flota
+                </button>
+
+                <button className="w-full bg-white hover:bg-zinc-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-[#E4E4E7] dark:border-zinc-700 text-[#09090B] dark:text-zinc-200 text-xs font-semibold py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow-sm">
+                  <span>⤓</span> Exportar Reporte de Turno
+                </button>
+              </div>
+            </div>
+
+            {/* Card 2: Rutas de Reparto (Zona Centro) Minimalist Map */}
+            <RouteNetworkMap />
+
+            {/* Card 3: División de Vehículos Donut Chart */}
+            <VehicleDonutChart />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
