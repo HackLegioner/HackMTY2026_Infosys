@@ -201,11 +201,11 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       style={{ width: '100%', height: '100%', minHeight: '520px', background: '#0A0E1A' }}
     >
       <MapController />
-      {/* High-speed, dark-themed CartoDB Dark Matter tile server */}
+      {/* 100% Free OpenStreetMap tile server with dark mode CSS filter - No API key required */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        subdomains="abcd"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        className="dark-tiles"
         maxZoom={19}
       />
 

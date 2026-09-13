@@ -10,7 +10,7 @@ const LeafletMapInner = dynamic(() => import('./LeafletMapInner'), {
   loading: () => (
     <div className="w-full h-full min-h-[500px] bg-[#0A0E1A] rounded-xl flex flex-col items-center justify-center text-slate-500 space-y-2">
       <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      <span className="text-xs font-mono">Initializing Monterrey CartoDB Map...</span>
+      <span className="text-xs font-mono">Initializing Monterrey OpenStreetMap Grid...</span>
     </div>
   ),
 });
@@ -26,7 +26,7 @@ export const MapView: React.FC<MapViewProps> = ({ shiftState }) => {
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
         <span className="font-mono font-semibold">Monterrey Live Grid</span>
         <span className="text-slate-500">|</span>
-        <span className="text-slate-400">CartoDB Dark Matter</span>
+        <span className="text-slate-400">OpenStreetMap Dark Grid</span>
       </div>
 
       <LeafletMapInner shiftState={shiftState} />
