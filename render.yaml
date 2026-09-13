@@ -1,4 +1,4 @@
-﻿services:
+services:
   # 1. DeliMan Next.js 14 Web Application
   - type: web
     name: deliman-app
@@ -10,6 +10,8 @@
     envVars:
       - key: NODE_VERSION
         value: 20.18.0
+      - key: HOSTNAME
+        value: "0.0.0.0"
       - key: MONGODB_URI
         sync: false
       - key: UPSTASH_REDIS_REST_URL
