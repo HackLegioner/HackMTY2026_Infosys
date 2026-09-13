@@ -55,10 +55,10 @@ export const ReasoningCard: React.FC<ReasoningCardProps> = ({ record, tier }) =>
         </div>
         <div className="flex items-center space-x-2 font-mono text-[11px]">
           <span className="text-[#fafafa] bg-[#121215] border border-[#27272a] px-2 py-0.5 rounded-md font-medium">
-            Accepted: {accepted}
+            Aceptadas: {accepted}
           </span>
           <span className="text-[#a1a1aa] bg-[#121215] border border-[#27272a] px-2 py-0.5 rounded-md font-medium">
-            Skipped: {skipped}
+            Omitidas: {skipped}
           </span>
         </div>
       </div>
@@ -66,7 +66,7 @@ export const ReasoningCard: React.FC<ReasoningCardProps> = ({ record, tier }) =>
       {record.reasoning && (
         <div className="pt-2 border-t border-[#27272a]">
           <span className="text-[10px] text-[#71717a] font-mono block uppercase tracking-wider font-semibold">
-            Decision Reasoning:
+            Razonamiento de la Decisión:
           </span>
           <p className="text-[#fafafa] italic text-[11px] mt-1 bg-[#121215] p-2.5 rounded-md border border-[#27272a] leading-relaxed">
             &quot;{record.reasoning}&quot;
@@ -78,10 +78,10 @@ export const ReasoningCard: React.FC<ReasoningCardProps> = ({ record, tier }) =>
         <div className="mt-2.5 bg-[#121215] p-3 rounded-md border border-[#3f3f46]">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] text-[#fafafa] font-mono font-semibold uppercase tracking-wider">
-              Gov Provenance &amp; Algorithmic Payload (Zero-LLM Runtime)
+              Trazabilidad Gubernamental &amp; Payload Algorítmico (Zero-LLM)
             </span>
             <span className="text-[9px] font-mono text-[#fafafa] bg-[#18181b] px-2 py-0.5 rounded-md border border-[#27272a] font-semibold tracking-wider">
-              AUDIT VERIFIED
+              VERIFICADO
             </span>
           </div>
           <pre className="text-[10px] text-[#a1a1aa] font-mono overflow-x-auto max-h-48 bg-[#09090b] p-2 rounded-md border border-[#27272a]">

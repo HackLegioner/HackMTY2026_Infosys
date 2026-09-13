@@ -60,23 +60,23 @@ export const AuditSidebar: React.FC<AuditSidebarProps> = ({ shiftId }) => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#27272a]">
         <div>
           <h3 className="text-sm font-bold text-[#fafafa] flex items-center gap-2.5">
-            <span>Auditor Panel &amp; Provenance</span>
+            <span>Panel de Auditoría &amp; Trazabilidad</span>
             {source === 'mongodb-atlas' && (
               <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-md bg-[#18181b] text-[#fafafa] border border-[#27272a]">
-                Atlas Cloud Verified
+                Verificado en Atlas Cloud
               </span>
             )}
             {source === 'in-memory' && (
               <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-md bg-[#18181b] text-[#fafafa] border border-[#27272a]">
-                Live Memory Sync
+                Sincronización en Memoria
               </span>
             )}
           </h3>
           <p className="text-xs text-[#a1a1aa] mt-1 font-normal">
-            Current Clearance: <span className="font-mono font-semibold uppercase text-[#fafafa]">{tier}</span>
-            {tier === 'public' && ' — High-level counts & transparency'}
-            {tier === 'business' && ' — Natural language decision rationale unlocked'}
-            {tier === 'gov' && ' — Full algorithmic payloads & Zero-LLM certification'}
+            Nivel de Acceso: <span className="font-mono font-semibold uppercase text-[#fafafa]">{tier}</span>
+            {tier === 'public' && ' — Conteo de decisiones y transparencia pública'}
+            {tier === 'business' && ' — Justificación de decisiones en lenguaje natural desbloqueada'}
+            {tier === 'gov' && ' — Payloads algorítmicos completos y certificación Zero-LLM'}
           </p>
         </div>
 
@@ -91,7 +91,7 @@ export const AuditSidebar: React.FC<AuditSidebarProps> = ({ shiftId }) => {
                 : 'bg-[#18181b] text-[#71717a] border-[#27272a] hover:text-[#fafafa] hover:border-[#3f3f46]'
             }`}
           >
-            Public
+            Público
           </button>
           <button
             type="button"
@@ -102,7 +102,7 @@ export const AuditSidebar: React.FC<AuditSidebarProps> = ({ shiftId }) => {
                 : 'bg-[#18181b] text-[#71717a] border-[#27272a] hover:text-[#fafafa] hover:border-[#3f3f46]'
             }`}
           >
-            Business
+            Empresarial
           </button>
           <button
             type="button"
@@ -113,7 +113,7 @@ export const AuditSidebar: React.FC<AuditSidebarProps> = ({ shiftId }) => {
                 : 'bg-[#18181b] text-[#71717a] border-[#27272a] hover:text-[#fafafa] hover:border-[#3f3f46]'
             }`}
           >
-            Gov Auditor
+            Auditor Gob
           </button>
         </div>
       </div>
@@ -122,7 +122,7 @@ export const AuditSidebar: React.FC<AuditSidebarProps> = ({ shiftId }) => {
       <div className="flex gap-2">
         <input
           type="text"
-          placeholder="API Key (e.g. courier_biz_2026 or courier_gov_2026)"
+          placeholder="Clave API (ej. courier_biz_2026 o courier_gov_2026)"
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && fetchAuditData()}
@@ -133,7 +133,7 @@ export const AuditSidebar: React.FC<AuditSidebarProps> = ({ shiftId }) => {
           disabled={loading}
           className="px-4 py-2 bg-[#ffffff] hover:bg-[#e4e4e7] text-[#09090b] disabled:opacity-40 rounded-md text-xs font-semibold transition cursor-pointer font-mono"
         >
-          {loading ? 'Querying...' : 'Fetch Audit'}
+          {loading ? 'Consultando...' : 'Consultar Auditoría'}
         </button>
       </div>
 
@@ -142,15 +142,15 @@ export const AuditSidebar: React.FC<AuditSidebarProps> = ({ shiftId }) => {
         {loading && logs.length === 0 ? (
           <div className="py-12 text-center text-[#71717a] text-xs flex items-center justify-center gap-2.5 font-mono">
             <span className="w-3.5 h-3.5 border-2 border-[#fafafa] border-t-transparent rounded-full animate-spin"></span>
-            Loading audit records for {shiftId}...
+            Cargando registros de auditoría para {shiftId}...
           </div>
         ) : logs.length === 0 ? (
           <div className="py-12 text-center bg-[#18181b] rounded-md border border-[#27272a] p-6 space-y-1.5">
             <p className="text-xs text-[#a1a1aa]">
-              No audit records found for shift <code className="text-[#fafafa] font-mono font-bold bg-[#121215] px-2 py-0.5 rounded border border-[#27272a]">{shiftId}</code>.
+              No se encontraron registros de auditoría para el turno <code className="text-[#fafafa] font-mono font-bold bg-[#121215] px-2 py-0.5 rounded border border-[#27272a]">{shiftId}</code>.
             </p>
             <p className="text-[11px] text-[#71717a]">
-              Start a shift on the live demo to generate real-time provenance entries.
+              Inicia un turno en la simulación en vivo para generar registros de procedencia en tiempo real.
             </p>
           </div>
         ) : (
