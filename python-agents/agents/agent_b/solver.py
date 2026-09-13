@@ -39,12 +39,70 @@ class AgentBHustler:
         lat = float(state.get("lat", 25.6692))
         lng = float(state.get("lng", -100.3099))
 
-        # 1. Score candidate orders
-        scores = self.scorer.score_orders(orders, lat, lng)
+        # 0. Check active adverse events & filter out hazardous orders (unsafe zones and road closures)
+        active_hazards = [
+            ev for ev in (events or [])
+            if ev.get("type") in ("unsafe_zone", "road_closure") or ev.get("event_type") in ("unsafe_zone", "road_closure")
+        ]
+        safe_orders = []
+        for o in orders:
+            in_hazard = False
+            for ev in active_hazards:
+                e_lat = ev.get("lat")
+                e_lon = ev.get("lon")
+                rad = float(ev.get("radius_km") or 1.5)
+                if e_lat is not None and e_lon is not None:
+                    plat, plon = self._extract_coords(o.get("pickup"), lat, lng)
+                    dlat, dlon = self._extract_coords(o.get("dropoff"), lat, lng)
+                    d1 = math.hypot((plat - e_lat) * 111.0, (plon - e_lon) * 111.0 * 0.9)
+                    d2 = math.hypot((dlat - e_lat) * 111.0, (dlon - e_lon) * 111.0 * 0.9)
+                    mid_lat = (plat + dlat) / 2
+                    mid_lon = (plon + dlon) / 2
+                    d3 = math.hypot((mid_lat - e_lat) * 111.0, (mid_lon - e_lon) * 111.0 * 0.9)
+                    if d1 <= rad or d2 <= rad or d3 <= (rad * 0.9):
+                        in_hazard = True
+                        break
+            if not in_hazard:
+                safe_orders.append(o)
 
-        # 2. Filter top candidates for batching (up to 3 orders)
-        ranked_orders = sorted(zip(orders, scores), key=lambda x: x[1], reverse=True)
-        top_candidates = [ord_tuple[0] for ord_tuple in ranked_orders[:3]]
+        if len(safe_orders) == 0:
+            all_ids = [(o.get("id") or o.get("order_id")) for o in orders]
+            return {
+                "agent_id": "agent_b",
+                "accepted": [],
+                "skipped": all_ids,
+                "earnings_total": 0.0,
+                "reasoning": "Hustler: All orders rejected due to active hazards or road closures in path.",
+                "detailed_reasoning": {"candidate_count": 0, "hazards_active": len(active_hazards)},
+            }
+
+        candidate_orders = safe_orders
+
+        # 1. Score candidate orders
+        scores = self.scorer.score_orders(candidate_orders, lat, lng)
+
+        # 2. Select anchor candidate (highest yield) and cluster nearby compatible orders
+        ranked_orders = sorted(zip(candidate_orders, scores), key=lambda x: x[1], reverse=True)
+        anchor_order = ranked_orders[0][0]
+        anchor_plat, anchor_plon = self._extract_coords(anchor_order.get("pickup"), lat, lng)
+        anchor_dlat, anchor_dlon = self._extract_coords(anchor_order.get("dropoff"), lat, lng)
+
+        # Only batch candidates within tight spatial proximity (pickup <= 1.8km, dropoff <= 2.5km)
+        clustered_candidates = [anchor_order]
+        for ord_tuple in ranked_orders[1:]:
+            if len(clustered_candidates) >= 3:
+                break
+            cand = ord_tuple[0]
+            cand_plat, cand_plon = self._extract_coords(cand.get("pickup"), lat, lng)
+            cand_dlat, cand_dlon = self._extract_coords(cand.get("dropoff"), lat, lng)
+
+            p_dist = math.hypot((cand_plat - anchor_plat) * 111.0, (cand_plon - anchor_plon) * 111.0 * 0.9)
+            d_dist = math.hypot((cand_dlat - anchor_dlat) * 111.0, (cand_dlon - anchor_dlon) * 111.0 * 0.9)
+
+            if p_dist <= 1.8 and d_dist <= 2.5:
+                clustered_candidates.append(cand)
+
+        top_candidates = clustered_candidates
 
         # 3. Run OR-Tools route solver
         try:
@@ -54,7 +112,7 @@ class AgentBHustler:
             accepted_ids = [
                 (o.get("id") or o.get("order_id"))
                 for o in top_candidates
-                if float(o.get("payout") or o.get("total_pay", 0)) >= 30
+                if float(o.get("payout") or o.get("total_pay", 0)) >= 25
             ]
             solved_route = []
 
@@ -71,9 +129,9 @@ class AgentBHustler:
             "accepted": accepted_ids,
             "skipped": skipped_ids,
             "earnings_total": round(earnings, 2),
-            "reasoning": f"Hustler: Batched {len(accepted_ids)} orders via OR-Tools CVRPTW cluster solver.",
+            "reasoning": f"Hustler: Batched {len(accepted_ids)} orders via OR-Tools spatial cluster solver.",
             "detailed_reasoning": {
-                "strategy": "ortools_cvrptw_batch",
+                "strategy": "ortools_spatial_cluster_batch",
                 "accepted_count": len(accepted_ids),
                 "skipped_count": len(skipped_ids),
                 "waypoint_order": solved_route,

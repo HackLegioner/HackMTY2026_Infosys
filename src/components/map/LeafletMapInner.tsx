@@ -1,14 +1,30 @@
-'use client';
-
-import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from 'react-leaflet';
+import React, { useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ShiftState } from '@/lib/types';
 import { MONTERREY_ZONES } from '@/lib/simulator/orderStream';
 
+function MapController() {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 150);
+    const t2 = setTimeout(() => map.invalidateSize(), 600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [map]);
+  return null;
+}
+
+const isValidCoord = (lat: any, lng: any) =>
+  typeof lat === 'number' && !isNaN(lat) && typeof lng === 'number' && !isNaN(lng) && lat !== 0 && lng !== 0;
+
 interface LeafletMapInnerProps {
   shiftState: ShiftState | null;
 }
+
 
 export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) => {
   const center: [number, number] = [25.6692, -100.3099]; // Monterrey Centro
@@ -64,13 +80,35 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     []
   );
 
-  const iconZone = useMemo(
+  const iconPickupHub = useMemo(
     () =>
       L.divIcon({
-        className: 'zone-dot',
-        html: `<div class="w-2.5 h-2.5 rounded-full bg-slate-400/80 border border-slate-200/50"></div>`,
+        className: 'zone-hub-pickup',
+        html: `<div class="w-3 h-3 rounded-full bg-amber-400 border-2 border-slate-900 shadow-[0_0_8px_rgba(245,158,11,0.7)] cursor-pointer" title="Punto de Recolección"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+      }),
+    []
+  );
+
+  const iconDropoffHub = useMemo(
+    () =>
+      L.divIcon({
+        className: 'zone-hub-dropoff',
+        html: `<div class="w-2.5 h-2.5 rounded-full bg-sky-400 border-2 border-slate-900 shadow-[0_0_6px_rgba(56,189,248,0.7)] cursor-pointer" title="Zona de Entrega"></div>`,
         iconSize: [10, 10],
         iconAnchor: [5, 5],
+      }),
+    []
+  );
+
+  const iconBothHub = useMemo(
+    () =>
+      L.divIcon({
+        className: 'zone-hub-both',
+        html: `<div class="w-3 h-3 rounded-full bg-indigo-400 border-2 border-slate-900 shadow-[0_0_8px_rgba(129,140,248,0.7)] cursor-pointer" title="Hub Mixto"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
       }),
     []
   );
@@ -97,35 +135,112 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     []
   );
 
-  const courierA = shiftState?.agents.agent_a;
-  const courierB = shiftState?.agents.agent_b;
-  const courierBase = shiftState?.agents.baseline;
+  const courierA = shiftState?.agents.agent_a || {
+    agentId: 'agent_a' as const,
+    lat: 25.6692,
+    lng: -100.3099,
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+    activeRoute: [],
+    carryingOrders: [],
+    status: 'idle' as const,
+    speedKmh: 25.0,
+    corridorName: 'Monterrey Zona Metropolitana',
+    penaltiesMXN: 0,
+    fuelCostMXN: 0,
+    netEarnings: 0,
+    incidentsCount: 0,
+  };
+
+  const courierB = shiftState?.agents.agent_b || {
+    agentId: 'agent_b' as const,
+    lat: 25.6574,
+    lng: -100.3684,
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+    activeRoute: [],
+    carryingOrders: [],
+    status: 'idle' as const,
+    speedKmh: 25.0,
+    corridorName: 'Monterrey Zona Metropolitana',
+    penaltiesMXN: 0,
+    fuelCostMXN: 0,
+    netEarnings: 0,
+    incidentsCount: 0,
+  };
+
+  const courierBase = shiftState?.agents.baseline || {
+    agentId: 'baseline' as const,
+    lat: 25.6514,
+    lng: -100.2895,
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+    activeRoute: [],
+    carryingOrders: [],
+    status: 'idle' as const,
+    speedKmh: 25.0,
+    corridorName: 'Monterrey Zona Metropolitana',
+    penaltiesMXN: 0,
+    fuelCostMXN: 0,
+    netEarnings: 0,
+    incidentsCount: 0,
+  };
 
   return (
     <MapContainer
       center={center}
-      zoom={12}
+      zoom={11}
       scrollWheelZoom={true}
       className="w-full h-full rounded-xl"
-      style={{ background: '#0A0E1A' }}
+      style={{ width: '100%', height: '100%', minHeight: '520px', background: '#0A0E1A' }}
     >
+      <MapController />
       {/* 100% Free OpenStreetMap tile server with dark mode CSS filter - No API key required */}
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         className="dark-tiles"
+        maxZoom={19}
       />
 
-      {/* Static Monterrey Hotspot Hubs */}
-      {MONTERREY_ZONES.map((z) => (
-        <Marker key={z.name} position={[z.lat, z.lon]} icon={iconZone}>
-          <Popup className="text-slate-900 text-xs">
-            <strong>{z.name}</strong>
-            <br />
-            Demand factor: {z.weight}x
-          </Popup>
-        </Marker>
-      ))}
+
+      {/* Static Monterrey Hotspot Hubs (Recolección y Entrega) */}
+      {MONTERREY_ZONES.map((z) => {
+        const icon =
+          z.type === 'pickup'
+            ? iconPickupHub
+            : z.type === 'dropoff'
+            ? iconDropoffHub
+            : iconBothHub;
+        const typeBadge =
+          z.type === 'pickup'
+            ? '🍴 Hub Recolección (Restaurantes)'
+            : z.type === 'dropoff'
+            ? '🏠 Destino Entrega (Residencial)'
+            : '⚡ Hub Mixto (Comercial / Residencial)';
+
+        return (
+          <Marker key={z.name} position={[z.lat, z.lon]} icon={icon}>
+            <Popup className="text-slate-900 text-xs">
+              <div className="font-bold text-slate-900 text-xs">{z.name}</div>
+              <div className="text-[10px] text-slate-500 font-semibold">{z.municipality}</div>
+              <div className="text-[11px] mt-1 text-indigo-700 font-medium">{typeBadge}</div>
+              {z.description && (
+                <div className="text-[10px] text-slate-600 mt-0.5">{z.description}</div>
+              )}
+              <div className="text-[10px] text-slate-500 mt-1">
+                Demanda estimada: <strong className="text-amber-600">{z.weight}x</strong>
+              </div>
+            </Popup>
+          </Marker>
+        );
+      })}
 
       {/* Dynamic Crisis & Surge Events */}
       {shiftState?.activeEvents.map((evt) => {
@@ -166,14 +281,67 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
               pathOptions={{
                 color: '#EF4444',
                 fillColor: '#EF4444',
-                fillOpacity: 0.3,
+                fillOpacity: 0.35,
                 weight: 2,
+                dashArray: '5, 5',
               }}
             >
               <Popup className="text-slate-900 text-xs">
-                <strong className="text-red-600">🚧 Road Closure</strong>
+                <strong className="text-red-600">🚧 Cierre Vial Total</strong>
                 <br />
                 {evt.description}
+                <br />
+                <span className="text-rose-700 font-bold">Tráfico bloqueado: Velocidad cae a 4 km/h</span>
+              </Popup>
+            </Circle>
+          );
+        }
+
+        if (evt.event_type === 'unsafe_zone') {
+          return (
+            <Circle
+              key={evt.event_id || evt.id}
+              center={[evt.lat, evt.lon]}
+              radius={radiusMeters}
+              pathOptions={{
+                color: '#A855F7',
+                fillColor: '#9333EA',
+                fillOpacity: 0.25,
+                weight: 2,
+                dashArray: '6, 6',
+              }}
+            >
+              <Popup className="text-slate-900 text-xs">
+                <strong className="text-purple-700">⚠️ Zona de Riesgo Crítico</strong>
+                <br />
+                {evt.description}
+                <br />
+                <span className="text-rose-600 font-bold">Penalización: -$45 MXN por incidente</span>
+              </Popup>
+            </Circle>
+          );
+        }
+
+        if (evt.event_type === 'rain') {
+          return (
+            <Circle
+              key={evt.event_id || evt.id}
+              center={[evt.lat, evt.lon]}
+              radius={radiusMeters}
+              pathOptions={{
+                color: '#38BDF8',
+                fillColor: '#0284C7',
+                fillOpacity: 0.15,
+                weight: 1.5,
+                dashArray: '4, 8',
+              }}
+            >
+              <Popup className="text-slate-900 text-xs">
+                <strong className="text-sky-600">⛈️ Tormenta Activa</strong>
+                <br />
+                {evt.description}
+                <br />
+                <span className="text-amber-700 font-semibold">Velocidad -40% | Demora en trayecto</span>
               </Popup>
             </Circle>
           );
@@ -183,32 +351,38 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       })}
 
       {/* Courier A Route Polyline */}
-      {courierA && courierA.activeRoute.length > 1 && (
+      {courierA && courierA.activeRoute && courierA.activeRoute.length > 1 && (
         <Polyline
-          positions={courierA.activeRoute.map((p) => [p.lat, p.lng])}
+          positions={courierA.activeRoute
+            .filter((p) => isValidCoord(p?.lat, p?.lng))
+            .map((p) => [p.lat, p.lng])}
           pathOptions={{ color: '#3B82F6', weight: 4, opacity: 0.85 }}
         />
       )}
 
       {/* Courier B Route Polyline */}
-      {courierB && courierB.activeRoute.length > 1 && (
+      {courierB && courierB.activeRoute && courierB.activeRoute.length > 1 && (
         <Polyline
-          positions={courierB.activeRoute.map((p) => [p.lat, p.lng])}
+          positions={courierB.activeRoute
+            .filter((p) => isValidCoord(p?.lat, p?.lng))
+            .map((p) => [p.lat, p.lng])}
           pathOptions={{ color: '#10B981', weight: 4, opacity: 0.85 }}
         />
       )}
 
       {/* Baseline Route Polyline */}
-      {courierBase && courierBase.activeRoute.length > 1 && (
+      {courierBase && courierBase.activeRoute && courierBase.activeRoute.length > 1 && (
         <Polyline
-          positions={courierBase.activeRoute.map((p) => [p.lat, p.lng])}
+          positions={courierBase.activeRoute
+            .filter((p) => isValidCoord(p?.lat, p?.lng))
+            .map((p) => [p.lat, p.lng])}
           pathOptions={{ color: '#94A3B8', weight: 3, opacity: 0.65, dashArray: '4, 4' }}
         />
       )}
 
       {/* Target Destination Markers (Pickup / Dropoff) */}
       {[courierA, courierB, courierBase].map((c) => {
-        if (!c?.currentTask?.target) return null;
+        if (!c?.currentTask?.target || !isValidCoord(c.currentTask.target.lat, c.currentTask.target.lng)) return null;
         const isPickup = c.currentTask.phase === 'to_pickup';
         return (
           <Marker
@@ -228,46 +402,58 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       })}
 
       {/* Agent A Marker */}
-      {courierA && (
+      {courierA && isValidCoord(courierA.lat, courierA.lng) && (
         <Marker position={[courierA.lat, courierA.lng]} icon={iconAgentA}>
           <Popup className="text-slate-900 text-xs">
             <strong className="text-blue-600">Agent A — The Economist 🧊</strong>
             <br />
-            Status: {courierA.status}
+            Status: <span className="font-semibold">{courierA.status === 'trapped_in_closure' ? '🚧 Atrapado en Cierre' : courierA.status}</span>
             <br />
-            Earnings: ${courierA.currentEarnings} MXN
+            Ganancia Bruta: ${courierA.currentEarnings} MXN
             <br />
-            Total Dist: {courierA.totalKm.toFixed(1)} km
+            Ganancia Neta: <strong className="text-emerald-700">${courierA.netEarnings ?? courierA.currentEarnings} MXN</strong>
+            <br />
+            Distancia: {courierA.totalKm.toFixed(1)} km
           </Popup>
         </Marker>
       )}
 
       {/* Agent B Marker */}
-      {courierB && (
+      {courierB && isValidCoord(courierB.lat, courierB.lng) && (
         <Marker position={[courierB.lat, courierB.lng]} icon={iconAgentB}>
           <Popup className="text-slate-900 text-xs">
             <strong className="text-emerald-600">Agent B — The Hustler ⚡</strong>
             <br />
-            Status: {courierB.status}
+            Status: <span className="font-semibold">{courierB.status === 'trapped_in_closure' ? '🚧 Atrapado en Cierre' : courierB.status}</span>
             <br />
-            Earnings: ${courierB.currentEarnings} MXN
+            Ganancia Bruta: ${courierB.currentEarnings} MXN
             <br />
-            Total Dist: {courierB.totalKm.toFixed(1)} km
+            Ganancia Neta: <strong className="text-emerald-700">${courierB.netEarnings ?? courierB.currentEarnings} MXN</strong>
+            <br />
+            Distancia: {courierB.totalKm.toFixed(1)} km
           </Popup>
         </Marker>
       )}
 
       {/* Baseline Marker */}
-      {courierBase && (
+      {courierBase && isValidCoord(courierBase.lat, courierBase.lng) && (
         <Marker position={[courierBase.lat, courierBase.lng]} icon={iconBaseline}>
           <Popup className="text-slate-900 text-xs">
-            <strong className="text-slate-600">Traditional App Baseline 📱</strong>
+            <strong className="text-slate-700">Traditional App Baseline 📱</strong>
             <br />
-            Status: {courierBase.status}
+            Status: <span className={`font-semibold ${courierBase.status === 'trapped_in_closure' ? 'text-rose-600 font-bold' : ''}`}>{courierBase.status === 'trapped_in_closure' ? '🚧 Atrapado en Cierre Vial (4 km/h)' : courierBase.status}</span>
             <br />
-            Earnings: ${courierBase.currentEarnings} MXN
+            Ganancia Bruta: ${courierBase.currentEarnings} MXN
+            {courierBase.penaltiesMXN ? (
+              <>
+                <br />
+                <span className="text-rose-600 font-semibold">Penalizaciones: -${courierBase.penaltiesMXN} MXN</span>
+              </>
+            ) : null}
             <br />
-            Total Dist: {courierBase.totalKm.toFixed(1)} km
+            Ganancia Neta: <strong className="text-slate-900">${courierBase.netEarnings ?? courierBase.currentEarnings} MXN</strong>
+            <br />
+            Distancia: {courierBase.totalKm.toFixed(1)} km
           </Popup>
         </Marker>
       )}

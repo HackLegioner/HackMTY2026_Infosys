@@ -15,9 +15,9 @@ export async function GET(request: Request) {
   // Check if manually stopped
   const status = await getShiftStatus(shiftId);
 
-  // Auto-start engine if not running and not stopped
-  if (!engine.timer && status !== 'stopped') {
-    engine.start();
+  // Auto-start engine if not currently running, not stopped, and shift has ticks remaining
+  if (!engine.isRunning && status !== 'stopped' && engine.state.elapsedMinutes < engine.state.totalMinutes) {
+    engine.start().catch((err) => console.error('[WS Route] Auto-start error:', err));
   }
 
   // SSE stream implementation

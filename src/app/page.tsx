@@ -14,8 +14,8 @@ export default function Home() {
   const [activeShiftId, setActiveShiftId] = useState<string | null>(null);
   const [durationMin, setDurationMin] = useState<number>(480);
   const [tickSpeedMs, setTickSpeedMs] = useState<number>(1000);
-  const { startShift, stopShift, triggerDisaster, loading } = useShiftControl();
-  const { state: shiftState } = useShiftStream(activeShiftId);
+  const { startShift, stopShift, triggerDisaster, changeSpeed, fastForward, loading, error: controlError } = useShiftControl();
+  const { state: shiftState, isConnected } = useShiftStream(activeShiftId);
 
   const handleStart = async () => {
     const res = await startShift(durationMin, 42, tickSpeedMs);
@@ -30,27 +30,51 @@ export default function Home() {
     }
   };
 
+  const handleSpeedChange = async (newSpeed: number) => {
+    setTickSpeedMs(newSpeed);
+    if (activeShiftId) {
+      await changeSpeed(activeShiftId, newSpeed);
+    }
+  };
+
+  const handleFastForward = async () => {
+    if (activeShiftId) {
+      await fastForward(activeShiftId);
+    }
+  };
+
   const handleTriggerEvent = (presetIndex: number) => {
     if (activeShiftId) {
       triggerDisaster(activeShiftId, presetIndex);
     }
   };
 
-  // Mock courier values before shift start
-  const defaultCourier = (agentId: 'agent_a' | 'agent_b' | 'baseline') => ({
-    agentId,
-    lat: 25.6692,
-    lng: -100.3099,
-    currentEarnings: 0,
-    totalKm: 0,
-    completedOrders: 0,
-    skippedOrders: 0,
-    activeRoute: [],
-    carryingOrders: [],
-    status: 'idle' as const,
-    speedKmh: 25.0,
-    corridorName: 'Monterrey Zona Metropolitana',
-  });
+  // Initial courier positions before shift start
+  const defaultCourier = (agentId: 'agent_a' | 'agent_b' | 'baseline') => {
+    const coords = {
+      agent_a: { lat: 25.6692, lng: -100.3099 }, // Centro / Macroplaza
+      agent_b: { lat: 25.6574, lng: -100.3684 }, // Centrito Valle
+      baseline: { lat: 25.6514, lng: -100.2895 }, // Tec / DistritoTec
+    };
+    return {
+      agentId,
+      lat: coords[agentId].lat,
+      lng: coords[agentId].lng,
+      currentEarnings: 0,
+      totalKm: 0,
+      completedOrders: 0,
+      skippedOrders: 0,
+      activeRoute: [],
+      carryingOrders: [],
+      status: 'idle' as const,
+      speedKmh: 25.0,
+      corridorName: 'Monterrey Zona Metropolitana',
+      penaltiesMXN: 0,
+      fuelCostMXN: 0,
+      netEarnings: 0,
+      incidentsCount: 0,
+    };
+  };
 
   const agentA = shiftState?.agents.agent_a || defaultCourier('agent_a');
   const agentB = shiftState?.agents.agent_b || defaultCourier('agent_b');
@@ -106,8 +130,8 @@ export default function Home() {
           >
             🔍 Audit Panel
           </Link>
-          {!activeShiftId && (
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
+            {!activeShiftId && (
               <select
                 value={durationMin}
                 onChange={(e) => setDurationMin(Number(e.target.value))}
@@ -118,17 +142,23 @@ export default function Home() {
                 <option value={120}>Turno Corto (2h / 120 Ticks)</option>
                 <option value={60}>Hora Pico (1h / 60 Ticks)</option>
               </select>
-              <select
-                value={tickSpeedMs}
-                onChange={(e) => setTickSpeedMs(Number(e.target.value))}
-                className="bg-slate-900 border border-slate-700 text-xs text-slate-300 rounded px-2 py-1.5 focus:outline-none focus:border-blue-500 font-medium"
-              >
-                <option value={1000}>1x (1s/tick)</option>
-                <option value={500}>2x (0.5s/tick)</option>
-                <option value={2000}>0.5x (2s/tick)</option>
-              </select>
-            </div>
-          )}
+            )}
+            <select
+              value={tickSpeedMs}
+              onChange={(e) => handleSpeedChange(Number(e.target.value))}
+              className="bg-slate-900 border border-slate-700 text-xs text-amber-300 rounded px-2 py-1.5 focus:outline-none focus:border-amber-500 font-medium font-mono"
+            >
+              <option value={1000}>⏱️ 1x (1s/tick)</option>
+              <option value={500}>⏱️ 2x (0.5s/tick)</option>
+              <option value={200}>⏩ 5x (200ms/tick)</option>
+              <option value={100}>⏩ 10x (100ms/tick)</option>
+              <option value={50}>⚡ 20x (50ms/tick)</option>
+              <option value={10}>⚡ Ultra Rápido (10ms)</option>
+              <option value={0}>🚀 Devolada / Flash (0ms)</option>
+              <option value={2000}>🐢 0.5x (2s/tick)</option>
+            </select>
+          </div>
+
           {!activeShiftId ? (
             <button
               onClick={handleStart}
@@ -138,16 +168,37 @@ export default function Home() {
               {loading ? 'Iniciando...' : `▶ Iniciar Turno (${durationMin} Ticks)`}
             </button>
           ) : (
-            <button
-              onClick={handleStop}
-              disabled={loading}
-              className="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-500 text-white rounded font-bold shadow-lg shadow-rose-950 transition cursor-pointer"
-            >
-              ⏹ Detener Turno
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleFastForward}
+                disabled={loading}
+                className="px-3 py-1.5 text-xs bg-amber-500 hover:bg-amber-400 text-black rounded font-black shadow-lg shadow-amber-950 transition cursor-pointer flex items-center gap-1"
+                title="Ejecuta todos los ticks restantes al instante"
+              >
+                ⚡ Devolada (Terminar)
+              </button>
+              <button
+                onClick={handleStop}
+                disabled={loading}
+                className="px-3 py-1.5 text-xs bg-rose-600 hover:bg-rose-500 text-white rounded font-bold shadow-lg shadow-rose-950 transition cursor-pointer"
+              >
+                ⏹ Detener
+              </button>
+            </div>
           )}
         </div>
       </header>
+
+      {/* Error Alert */}
+      {controlError && (
+        <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-400 text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{controlError}</span>
+          </div>
+          <span className="text-[10px] text-rose-300 font-mono">Verifica la conexión del servidor</span>
+        </div>
+      )}
 
       {/* Tri-Agent Dashboard Panels */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

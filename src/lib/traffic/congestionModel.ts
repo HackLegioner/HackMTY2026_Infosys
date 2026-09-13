@@ -117,6 +117,42 @@ export function getZoneBottleneck(lat: number, lng: number): {
     };
   }
 
+  // 7. Av. Miguel Alemán (corredor San Nicolás - Apodaca / Aeropuerto)
+  if (lat >= 25.710 && lat <= 25.790 && lng >= -100.260 && lng <= -100.180) {
+    return {
+      zoneMultiplier: 0.85,
+      corridorName: 'Av. Miguel Alemán (Apodaca)',
+      isBottleneck: true,
+    };
+  }
+
+  // 8. Av. Paseo de los Leones (corredor arterial Cumbres)
+  if (lat >= 25.700 && lat <= 25.760 && lng >= -100.440 && lng <= -100.360) {
+    return {
+      zoneMultiplier: 0.83,
+      corridorName: 'Av. Paseo de los Leones (Cumbres)',
+      isBottleneck: true,
+    };
+  }
+
+  // 9. Av. Manuel L. Barragán / Sendero (San Nicolás - Escobedo)
+  if (lat >= 25.720 && lat <= 25.790 && lng >= -100.340 && lng <= -100.300) {
+    return {
+      zoneMultiplier: 0.86,
+      corridorName: 'Av. Barragán / Sendero Divisorio',
+      isBottleneck: false,
+    };
+  }
+
+  // 10. Carretera Nacional / Valle Alto
+  if (lat >= 25.550 && lat <= 25.620 && lng >= -100.280 && lng <= -100.230) {
+    return {
+      zoneMultiplier: 0.88,
+      corridorName: 'Carretera Nacional / Esfera',
+      isBottleneck: false,
+    };
+  }
+
   // Default Monterrey grid
   return {
     zoneMultiplier: 1.0,

@@ -10,7 +10,7 @@ const StartShiftSchema = z.object({
   shiftId: z.string().optional(),
   durationMin: z.number().int().min(5).max(1440).default(480),
   seed: z.number().int().default(42),
-  tickSpeedMs: z.number().int().min(100).max(10000).default(1000),
+  tickSpeedMs: z.number().int().min(0).max(10000).default(1000),
 });
 
 export async function POST(request: Request) {
@@ -30,9 +30,12 @@ export async function POST(request: Request) {
       parsed.data.tickSpeedMs
     );
 
-    await engine.start();
-    await setShiftStatus(shiftId, 'running').catch(() => {});
-    await saveShiftState(shiftId, engine.state).catch(() => {});
+    // Start engine in background so response returns instantly (<5ms)
+    engine.start().catch((err) => {
+      console.error('[ShiftEngine] Error during engine start:', err);
+    });
+    setShiftStatus(shiftId, 'running').catch(() => {});
+    saveShiftState(shiftId, engine.state).catch(() => {});
 
     return NextResponse.json({
       ok: true,
