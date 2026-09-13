@@ -19,6 +19,7 @@ RUN if [ -f "./prisma/schema.prisma" ]; then npx prisma generate; fi
 # Disable telemetry during build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV OUTPUT_STANDALONE=1
 
 RUN npm run build
 
