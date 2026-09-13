@@ -158,7 +158,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
         <Marker key={rest.id} position={[rest.lat, rest.lon]} icon={createRestaurantIcon(rest.foodIcon)}>
           <Popup className="text-slate-900 text-xs">
             <div className="font-bold text-slate-900 text-xs flex items-center gap-1">
-              <span>{rest.foodIcon}</span> {rest.name}
+              {rest.name}
             </div>
             <div className="text-[10px] text-slate-500 mt-0.5">{rest.corridor} ({rest.municipality})</div>
             <div className="text-[11px] text-emerald-700 font-semibold mt-1">

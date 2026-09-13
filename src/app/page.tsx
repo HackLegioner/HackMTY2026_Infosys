@@ -9,7 +9,6 @@ import MapView from '@/components/map/MapView';
 import EventBanner from '@/components/dashboard/EventBanner';
 import ComparisonTable from '@/components/dashboard/ComparisonTable';
 import OrderCard from '@/components/dashboard/OrderCard';
-import Link from 'next/link';
 
 export default function Home() {
   const [activeShiftId, setActiveShiftId] = useState<string | null>(null);
@@ -184,7 +183,7 @@ export default function Home() {
                   className="px-3.5 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#fafafa] border border-[#27272a] rounded-md font-mono transition cursor-pointer"
                   title="Ejecuta todos los ticks restantes al instante"
                 >
-                  ⚡ Devolada
+                  Instantáneo
                 </button>
                 <button
                   onClick={handleStop}

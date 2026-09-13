@@ -167,7 +167,7 @@ export class ShiftEngine {
       decisions: {
         agent_a: {
           agent_id: 'agent_a',
-          label: 'The Economist 🧊',
+          label: 'The Economist',
           accepted: [],
           skipped: [],
           earnings_total: 0,
@@ -179,7 +179,7 @@ export class ShiftEngine {
         },
         agent_b: {
           agent_id: 'agent_b',
-          label: 'The Hustler ⚡',
+          label: 'The Hustler',
           accepted: [],
           skipped: [],
           earnings_total: 0,
@@ -191,7 +191,7 @@ export class ShiftEngine {
         },
         baseline: {
           agent_id: 'baseline',
-          label: 'Traditional App Baseline 📱',
+          label: 'Traditional App Baseline',
           accepted: [],
           skipped: [],
           earnings_total: 0,
@@ -208,7 +208,7 @@ export class ShiftEngine {
         condition: 'clear',
         isRain: false,
         isExtremeHeat: false,
-        description: '☀️ Monterrey despejado',
+        description: 'Monterrey despejado',
       },
       traffic: {
         formattedTime: '18:15',

@@ -4,7 +4,7 @@ from agents.agent_b.scorer import OrderScorer
 
 class AgentBHustler:
     """
-    Agent B — 'The Hustler ⚡'
+    Agent B — 'The Hustler'
     Batches multiple nearby orders and optimizes sequence via OR-Tools VRPTW / TSP.
     Prefers high volume and route clustering.
     """

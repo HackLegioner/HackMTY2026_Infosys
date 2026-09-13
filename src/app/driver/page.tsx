@@ -684,7 +684,7 @@ export default function DriverDashboardPage() {
                   onClick={() => alert('Alerta enviada a la flota: Tráfico pesado detectado en Gonzalitos y Morones Prieto.')}
                   className="w-full bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa] text-xs font-medium py-2 rounded-md transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span>ⓘ</span> Alertar a la Flota
+                  Alertar a la Flota
                 </button>
 
                 <button
@@ -692,7 +692,7 @@ export default function DriverDashboardPage() {
                   onClick={handleExportReport}
                   className="w-full bg-[#18181b] hover:bg-[#27272a] border border-[#27272a] text-[#fafafa] text-xs font-medium py-2 rounded-md transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span>⤓</span> Exportar Reporte de Turno (JSON)
+                  Exportar Reporte de Turno (JSON)
                 </button>
 
                 <Link

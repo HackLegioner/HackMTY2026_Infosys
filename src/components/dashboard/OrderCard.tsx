@@ -16,13 +16,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, decision = 'pending
 
   const restName = order.restaurant_name || order.pickup?.name || order.pickup?.zone || 'Restaurante MTY';
   const dropName = order.dropoff?.name || order.dropoff?.zone || 'Monterrey';
-  const foodIcon = order.food_icon || '🍔';
 
   return (
     <div className="bg-[#121215] border border-[#27272a] rounded-md p-3.5 flex justify-between items-center text-xs hover:border-[#3f3f46] transition">
       <div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm">{foodIcon}</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#fafafa]"></span>
           <span className="font-mono text-[#fafafa] font-semibold">{restName}</span>
           <span className="font-mono">
             <span className="text-[#71717a]">$</span>

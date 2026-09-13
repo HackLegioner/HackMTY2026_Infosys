@@ -14,7 +14,7 @@ export const DEMO_PRESET_EVENTS: DisruptionEvent[] = [
       speed_drop_kmh: 4.0,
       level: 'Hardcore',
     },
-    description: '🚧 Inundación Total — Par Vial Constitución & Félix U. Gómez (Velocidad cae a 4 km/h)',
+    description: 'Inundación Total — Par Vial Constitución & Félix U. Gómez (Velocidad cae a 4 km/h)',
     active: true,
   },
   {
@@ -25,7 +25,7 @@ export const DEMO_PRESET_EVENTS: DisruptionEvent[] = [
     radius_km: 2.8,
     affected_zones: ['Centrito Valle', 'Calzada del Valle', 'Fashion Drive'],
     metadata: { multiplier: 2.5, reason: 'High Demand Gourmet Peak', level: 'Medio' },
-    description: '⚡ Surge 2.5x en Centrito Valle & Calzada del Valle (San Pedro)',
+    description: 'Surge 2.5x en Centrito Valle & Calzada del Valle (San Pedro)',
     active: true,
   },
   {
@@ -36,7 +36,7 @@ export const DEMO_PRESET_EVENTS: DisruptionEvent[] = [
     radius_km: 3.2,
     affected_zones: ['Guadalupe Centro / Estadio BBVA', 'Linda Vista'],
     metadata: { multiplier: 3.0, reason: 'Clásico Regio Estadio BBVA', level: 'Hardcore' },
-    description: '⚽ Surge 3.0x Clásico Regio — Estadio BBVA / La Pastora (+400% pedidos)',
+    description: 'Surge 3.0x Clásico Regio — Estadio BBVA / La Pastora (+400% pedidos)',
     active: true,
   },
   {
@@ -47,7 +47,7 @@ export const DEMO_PRESET_EVENTS: DisruptionEvent[] = [
     radius_km: 1.0,
     affected_zones: ['San Jerónimo', 'Galerías Monterrey'],
     metadata: { road: 'Av. Gonzalitos / Fleteros', reason: 'Mega Obra y Cierre de Carriles', speed_drop_kmh: 5.0, level: 'Medio' },
-    description: '🚧 Cierre Vial — Av. Gonzalitos & Fleteros (Paso a Desnivel Bloqueado)',
+    description: 'Cierre Vial — Av. Gonzalitos & Fleteros (Paso a Desnivel Bloqueado)',
     active: true,
   },
   {
@@ -58,7 +58,7 @@ export const DEMO_PRESET_EVENTS: DisruptionEvent[] = [
     radius_km: 12.0,
     affected_zones: ['Centro', 'San Pedro', 'DistritoTec', 'Cumbres'],
     metadata: { multiplier: 1.8, reason: 'Tormenta Torrencial Cuenca Río Santa Catarina', speed_multiplier: 0.60, level: 'Medio' },
-    description: '⛈️ Tormenta Torrencial — Lluvia 45mm/h, asfalto resbaloso y velocidad -40%',
+    description: 'Tormenta Torrencial — Lluvia 45mm/h, asfalto resbaloso y velocidad -40%',
     active: true,
   },
   {
@@ -69,7 +69,7 @@ export const DEMO_PRESET_EVENTS: DisruptionEvent[] = [
     radius_km: 1.5,
     affected_zones: ['Independencia / Cerro de la Campana'],
     metadata: { risk_level: 'critical', penalty_mxn: 45.0, reason: 'Riesgo Crítico de Robo de Carga', level: 'Fácil' },
-    description: '⚠️ Zona de Riesgo Crítico — Colonia Independencia (-$45 MXN por riesgo de carga)',
+    description: 'Zona de Riesgo Crítico — Colonia Independencia (-$45 MXN por riesgo de carga)',
     active: true,
   },
 ];

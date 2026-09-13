@@ -31,7 +31,7 @@ def _is_in_hazard(ord_item, event):
 
 class AgentAEconomist:
     """
-    Agent A — 'The Economist 🧊'
+    Agent A — 'The Economist'
     Maximizes net earnings per km using DQN / profit-density policy.
     Rejects low-margin orders, evades hazards/closures, seeks surge zones.
     """

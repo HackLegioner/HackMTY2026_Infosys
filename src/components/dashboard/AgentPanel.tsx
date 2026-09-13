@@ -122,7 +122,7 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
             <div className="font-mono text-xs sm:text-sm">
               {courier.incidentsCount ? (
                 <span className="text-rose-400 font-semibold">
-                  ⚠️ {courier.incidentsCount} (-${courier.penaltiesMXN || 0})
+                  {courier.incidentsCount} (-${courier.penaltiesMXN || 0})
                 </span>
               ) : (
                 <span className="text-emerald-400 font-semibold">0 (Seguro)</span>
@@ -134,7 +134,7 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
             <div className="font-mono text-xs sm:text-sm">
               {(courier.dispatchCooldownTicks || 0) > 0 ? (
                 <span className="text-purple-400 font-semibold animate-pulse">
-                  ⏳ {courier.dispatchCooldownTicks}m cool
+                  {courier.dispatchCooldownTicks}m cooldown
                 </span>
               ) : (
                 <span className="text-[#fafafa] font-semibold">

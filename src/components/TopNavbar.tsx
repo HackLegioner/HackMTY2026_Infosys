@@ -19,7 +19,7 @@ interface TopNavbarProps {
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
   showBrand = false,
-  brandTitle = 'HackLegioner',
+  brandTitle = 'The Courier',
   activeTab,
   userName = 'Admin',
   userRoleLabel = 'Usuario actual',

@@ -1,11 +1,11 @@
-# 📖 How It Works — The Courier Engine
+# How It Works — The Courier Engine
 
 > **Real-Time Multi-Agent AI Courier Optimization Engine for Monterrey, Mexico**  
 > Built for HackMTY 2026 (Infosys Challenge #3)
 
 ---
 
-## 🎯 Executive Summary & Concept
+## Executive Summary & Concept
 
 In modern gig-economy delivery platforms (Uber Eats, Rappi, DiDi Food), couriers suffer from naive First-In, First-Out (FIFO) order dispatching that ignores real-world urban physics:
 - Getting stuck in heavy traffic bottlenecks (e.g., Av. Gonzalitos, Par Vial Morones Prieto) during peak rush hours.
@@ -16,43 +16,43 @@ In modern gig-economy delivery platforms (Uber Eats, Rappi, DiDi Food), couriers
 
 ---
 
-## 🏗️ End-to-End System Architecture
+## End-to-End System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       Next.js 14 Webapp (Port 3000)                     │
-│                                                                         │
-│   ┌───────────────────────────┐    ┌────────────────────────────────┐   │
-│   │  Frontend Views           │    │  API Routes & SSE Stream       │   │
-│   │  / (Tri-Agent Split Demo) │    │  POST /api/sim/start           │   │
-│   │  /driver (Fleet Console)  │    │  DELETE /api/sim/stop/[id]     │   │
-│   │  /audit (Compliance Tier) │    │  GET  /api/ws (Live SSE ticks) │   │
-│   └─────────────┬─────────────┘    └────────────────┬───────────────┘   │
-└─────────────────┼───────────────────────────────────┼───────────────────┘
-                  │                                   │
-      ┌───────────▼────────────┐          ┌───────────▼───────────┐
-      │  Open-Meteo Live API   │          │  Python Agent Service │
-      │  (Weather & Disruption)│          │  (Port 8001 — FastAPI)│
-      └────────────────────────┘          │  POST /decide/agent-a │
-                                          │  POST /decide/agent-b │
-                                          └───────────┬───────────┘
-                                                      │
-                                      ┌───────────────▼───────────────┐
-                                      │  AI Optimization Models       │
-                                      │  Agent A: DQN (Profit Margin) │
-                                      │  Agent B: OR-Tools + XGBoost  │
-                                      └───────────────────────────────┘
-┌─────────────────────────────────┐
-│  OSRM Monterrey Routing Graph   │  (Docker :5000 / Public OSRM fallback)
-│  Loma Larga Tunnel Navigation   │  Real-time waypoint physics
-└─────────────────────────────────┘
+
+                       Next.js 14 Webapp (Port 3000)                     
+                                                                         
+          
+     Frontend Views                 API Routes & SSE Stream          
+     / (Tri-Agent Split Demo)       POST /api/sim/start              
+     /driver (Fleet Console)        DELETE /api/sim/stop/[id]        
+     /audit (Compliance Tier)       GET  /api/ws (Live SSE ticks)    
+          
+
+                                                     
+                
+        Open-Meteo Live API               Python Agent Service 
+        (Weather & Disruption)            (Port 8001 — FastAPI)
+                  POST /decide/agent-a 
+                                            POST /decide/agent-b 
+                                          
+                                                      
+                                      
+                                        AI Optimization Models       
+                                        Agent A: DQN (Profit Margin) 
+                                        Agent B: OR-Tools + XGBoost  
+                                      
+
+  OSRM Monterrey Routing Graph     (Docker :5000 / Public OSRM fallback)
+  Loma Larga Tunnel Navigation     Real-time waypoint physics
+
 ```
 
 ---
 
-## ⚙️ Core Operational Pillars
+## Core Operational Pillars
 
-### 1. 🌦️ Live Weather Ingestion (Open-Meteo API)
+### 1.  Live Weather Ingestion (Open-Meteo API)
 - **Zero API Key / Zero Credit Card**: Integrated with the public Open-Meteo forecast API for Monterrey coordinates (`25.6692, -100.3099`).
 - **Dynamic Event Injection**:
   - At shift launch, the simulator queries current meteorological parameters (temperature, rain, showers, WMO weather codes, wind speed).
@@ -67,7 +67,7 @@ In modern gig-economy delivery platforms (Uber Eats, Rappi, DiDi Food), couriers
 
 ---
 
-### 2. 🚦 IRL Monterrey Rush-Hour & Congestion Physics
+### 2.  IRL Monterrey Rush-Hour & Congestion Physics
 Instead of assuming static travel speeds, the simulator models Monterrey's empirical congestion curves:
 - **Peak Rush-Hour Schedules**:
   - **Morning Rush**: $07:30 - 09:30$ (peaking at $08:15$, speed multiplier $0.58\times$).
@@ -85,7 +85,7 @@ Instead of assuming static travel speeds, the simulator models Monterrey's empir
 
 ---
 
-### 3. 🗺️ OSRM Real Street Waypoint Routing
+### 3.  OSRM Real Street Waypoint Routing
 - **Eliminating "Mountain Cutting"**:
   - Monterrey is surrounded by mountains (Cerro de la Silla, Sierra Madre Oriental, Loma Larga). Traditional mock simulations draw diagonal lines straight across mountains and buildings.
   - **The Courier** computes real street geometry using OSRM. When routing between San Pedro and Monterrey Centro, couriers are strictly navigated through the **Túnel de la Loma Larga** or arterial freeway corridors.
@@ -96,7 +96,7 @@ Instead of assuming static travel speeds, the simulator models Monterrey's empir
 
 ---
 
-### 4. 📦 Kaggle Food Delivery Dataset Calibration
+### 4.  Kaggle Food Delivery Dataset Calibration
 Parameters are not arbitrary; they are calibrated using distributions from the standard Kaggle Food Delivery Dataset:
 - **Kitchen Preparation Wait Times by Food Type**:
   - `snack` (beverages, bakeries): $5 - 8\text{ minutes}$ (1 tick wait)
@@ -115,9 +115,9 @@ Parameters are not arbitrary; they are calibrated using distributions from the s
 
 ---
 
-## 🤖 The Competing Agent Architectures
+## The Competing Agent Architectures
 
-| Parameter | Agent A: The Economist 🧊 | Agent B: The Hustler ⚡ | Baseline: Traditional App 📱 |
+| Parameter | Agent A: The Economist  | Agent B: The Hustler  | Baseline: Traditional App  |
 | :--- | :--- | :--- | :--- |
 | **Strategy** | Profit Margin Maximizer | Volume & Batch Clustering | Naive FIFO |
 | **Engine** | Deep Q-Network (DQN) | Google OR-Tools CVRPTW + XGBoost | Unoptimized Single Queue |
@@ -131,7 +131,7 @@ $$\text{Score} = \left( \frac{\text{Payout} + \text{ExpectedTip}}{\text{TransitM
 
 ---
 
-## 🖥️ User Interface & Views
+## User Interface & Views
 
 1. **Split-Screen Live Arena (`/`)**:
    - Split-screen comparison cards with real-time earnings flip counters, km traversed, and completed order tallies.
@@ -152,7 +152,7 @@ $$\text{Score} = \left( \frac{\text{Payout} + \text{ExpectedTip}}{\text{TransitM
 
 ---
 
-## 🚀 Pitch Takeaways for Judges
+## Pitch Takeaways for Judges
 
 1. **Defensible Economics**: Decisions are driven by empirical data distributions from Kaggle, avoiding synthetic "toy" metrics.
 2. **True Urban Geography**: Real Monterrey road network via OSRM avoids naive straight-line simulations and respects natural topography.

@@ -36,7 +36,7 @@ export interface ZoneLocation {
 }
 
 export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
-  // ─── SAN PEDRO GARZA GARCÍA ───
+  // --- SAN PEDRO GARZA GARCÍA ---
   {
     id: 'rest_sonora_grill',
     name: 'Sonora Grill Prime (Centrito Valle)',
@@ -45,7 +45,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'San Pedro Garza García',
     corridor: 'Calzada del Valle / Río Mississipi',
     foodType: 'buffet_gourmet',
-    foodIcon: '🥩',
+    foodIcon: 'R',
     avgTicketMxn: 850,
     prepTimeRange: [18, 25],
     weight: 1.9,
@@ -58,7 +58,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'San Pedro Garza García',
     corridor: 'Calzada del Valle',
     foodType: 'buffet_gourmet',
-    foodIcon: '🍷',
+    foodIcon: 'R',
     avgTicketMxn: 720,
     prepTimeRange: [15, 22],
     weight: 1.8,
@@ -71,7 +71,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'San Pedro Garza García',
     corridor: 'Av. José Vasconcelos',
     foodType: 'casual_dining',
-    foodIcon: '🍗',
+    foodIcon: 'R',
     avgTicketMxn: 650,
     prepTimeRange: [14, 20],
     weight: 1.7,
@@ -84,7 +84,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'San Pedro Garza García',
     corridor: 'Valle Oriente / Diego Rivera',
     foodType: 'fast_food',
-    foodIcon: '🍔',
+    foodIcon: 'R',
     avgTicketMxn: 320,
     prepTimeRange: [8, 12],
     weight: 2.0,
@@ -97,13 +97,13 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'San Pedro Garza García',
     corridor: 'Real San Agustín',
     foodType: 'casual_dining',
-    foodIcon: '🍖',
+    foodIcon: 'R',
     avgTicketMxn: 580,
     prepTimeRange: [16, 24],
     weight: 1.8,
   },
 
-  // ─── MONTERREY SUR & DISTRITOTEC ───
+  // --- MONTERREY SUR & DISTRITOTEC ---
   {
     id: 'rest_taqueria_juarez',
     name: 'Taquería Juárez (Garza Sada)',
@@ -112,7 +112,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'DistritoTec / Garza Sada',
     foodType: 'snack',
-    foodIcon: '🌮',
+    foodIcon: 'R',
     avgTicketMxn: 180,
     prepTimeRange: [6, 10],
     weight: 2.1,
@@ -125,7 +125,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Av. Revolución / Nuevo Sur',
     foodType: 'casual_dining',
-    foodIcon: '🍺',
+    foodIcon: 'R',
     avgTicketMxn: 380,
     prepTimeRange: [12, 16],
     weight: 1.9,
@@ -138,13 +138,13 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Contry / Av. Revolución',
     foodType: 'snack',
-    foodIcon: '🌮',
+    foodIcon: 'R',
     avgTicketMxn: 160,
     prepTimeRange: [5, 8],
     weight: 1.6,
   },
 
-  // ─── MONTERREY CENTRO & OBISPADO ───
+  // --- MONTERREY CENTRO & OBISPADO ---
   {
     id: 'rest_almacen_42',
     name: 'Almacén 42 (Barrio Antiguo)',
@@ -153,7 +153,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Calle Morelos / Macroplaza',
     foodType: 'casual_dining',
-    foodIcon: '🍕',
+    foodIcon: 'R',
     avgTicketMxn: 310,
     prepTimeRange: [10, 15],
     weight: 1.7,
@@ -166,7 +166,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Barrio Antiguo Morelos',
     foodType: 'casual_dining',
-    foodIcon: '🌯',
+    foodIcon: 'R',
     avgTicketMxn: 260,
     prepTimeRange: [12, 18],
     weight: 1.5,
@@ -179,13 +179,13 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Av. Hidalgo / Chepevera',
     foodType: 'casual_dining',
-    foodIcon: '🧀',
+    foodIcon: 'R',
     avgTicketMxn: 420,
     prepTimeRange: [10, 15],
     weight: 1.4,
   },
 
-  // ─── MONTERREY PONIENTE (SAN JERÓNIMO & CUMBRES) ───
+  // --- MONTERREY PONIENTE (SAN JERÓNIMO & CUMBRES) ---
   {
     id: 'rest_la_nacional',
     name: 'La Nacional (San Jerónimo)',
@@ -194,7 +194,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Av. Fleteros / Gonzalitos',
     foodType: 'buffet_gourmet',
-    foodIcon: '🥩',
+    foodIcon: 'R',
     avgTicketMxn: 780,
     prepTimeRange: [16, 22],
     weight: 1.8,
@@ -207,7 +207,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Av. Insurgentes / Gonzalitos',
     foodType: 'casual_dining',
-    foodIcon: '🦐',
+    foodIcon: 'R',
     avgTicketMxn: 490,
     prepTimeRange: [14, 18],
     weight: 1.7,
@@ -220,7 +220,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Cumbres / Av. Leones',
     foodType: 'buffet_gourmet',
-    foodIcon: '🍲',
+    foodIcon: 'R',
     avgTicketMxn: 620,
     prepTimeRange: [18, 25],
     weight: 1.6,
@@ -233,13 +233,13 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Monterrey',
     corridor: 'Plaza Cumbres / Av. Hacienda Peñuelas',
     foodType: 'fast_food',
-    foodIcon: '🍗',
+    foodIcon: 'R',
     avgTicketMxn: 340,
     prepTimeRange: [10, 14],
     weight: 1.7,
   },
 
-  // ─── SAN NICOLÁS DE LOS GARZA ───
+  // --- SAN NICOLÁS DE LOS GARZA ---
   {
     id: 'rest_gran_pastor',
     name: 'El Gran Pastor (Plaza Fiesta Anáhuac)',
@@ -248,7 +248,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'San Nicolás de los Garza',
     corridor: 'Av. Manuel L. Barragán',
     foodType: 'buffet_gourmet',
-    foodIcon: '🍖',
+    foodIcon: 'R',
     avgTicketMxn: 520,
     prepTimeRange: [15, 20],
     weight: 1.6,
@@ -261,13 +261,13 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'San Nicolás de los Garza',
     corridor: 'Av. Universidad / Estadio Universitario',
     foodType: 'snack',
-    foodIcon: '🌮',
+    foodIcon: 'R',
     avgTicketMxn: 210,
     prepTimeRange: [6, 9],
     weight: 1.9,
   },
 
-  // ─── APODACA ───
+  // --- APODACA ---
   {
     id: 'rest_italiannis',
     name: 'Italianni’s (Paseo La Fe / Citadel)',
@@ -276,7 +276,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Apodaca',
     corridor: 'Av. Miguel Alemán',
     foodType: 'casual_dining',
-    foodIcon: '🍝',
+    foodIcon: 'R',
     avgTicketMxn: 390,
     prepTimeRange: [14, 18],
     weight: 1.7,
@@ -289,13 +289,13 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Apodaca',
     corridor: 'Av. Zaragoza / Centro',
     foodType: 'snack',
-    foodIcon: '🌮',
+    foodIcon: 'R',
     avgTicketMxn: 140,
     prepTimeRange: [5, 8],
     weight: 1.4,
   },
 
-  // ─── SANTA CATARINA ───
+  // --- SANTA CATARINA ---
   {
     id: 'rest_mochomos',
     name: 'Mochomos (Vía Cordillera)',
@@ -304,7 +304,7 @@ export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
     municipality: 'Santa Catarina',
     corridor: 'Valle Poniente / Alfonso Reyes',
     foodType: 'buffet_gourmet',
-    foodIcon: '🥩',
+    foodIcon: 'R',
     avgTicketMxn: 820,
     prepTimeRange: [16, 22],
     weight: 1.5,

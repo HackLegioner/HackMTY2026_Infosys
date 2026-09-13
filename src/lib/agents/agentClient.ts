@@ -74,7 +74,7 @@ export async function getAgentDecision(
   let skipReason = '';
 
   if (agentType === 'agent_a') {
-    // 🧊 THE ECONOMIST: Política de Cero Riesgo y Máximo Margen
+    // THE ECONOMIST: Política de Cero Riesgo y Máximo Margen
     const minMxnPerKm = hasRain ? 11.5 : 9.0;
     const minPayout = hasRain ? 36 : 28;
     const courierLat = Number(state?.lat || 25.6692);
@@ -124,7 +124,7 @@ export async function getAgentDecision(
       }
     }
   } else {
-    // ⚡ THE HUSTLER: Agrupamiento espacial estricto (Cluster Batching)
+    // THE HUSTLER: Agrupamiento espacial estricto (Cluster Batching)
     const courierLat = Number(state?.lat || 25.6692);
     const courierLng = Number(state?.lng || state?.lon || -100.3099);
 
@@ -138,7 +138,7 @@ export async function getAgentDecision(
     if (safeOrders.length === 0) {
       return {
         agent_id: 'agent_b',
-        label: 'Agent B — The Hustler ⚡',
+        label: 'Agent B — The Hustler',
         accepted: [],
         skipped: orders.map((o) => o.order_id),
         earnings_total: 0,
@@ -219,7 +219,7 @@ export async function getAgentDecision(
 
   return {
     agent_id: agentType,
-    label: agentType === 'agent_a' ? 'The Economist 🧊' : 'The Hustler ⚡',
+    label: agentType === 'agent_a' ? 'The Economist' : 'The Hustler',
     accepted,
     skipped,
     earnings_total: Math.round(totalPay * 100) / 100,

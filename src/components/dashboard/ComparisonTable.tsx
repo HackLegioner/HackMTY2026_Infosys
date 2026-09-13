@@ -106,11 +106,11 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ state }) => {
                 <td className="px-5 py-3.5">
                   {r.trapped ? (
                     <span className="px-2 py-0.5 rounded-[4px] bg-rose-950/40 text-rose-300 border border-rose-800/50 font-mono text-[10px] flex items-center gap-1 w-fit animate-pulse">
-                      <span>🚧</span> Atrapado en Cierre
+                      Atrapado en Cierre
                     </span>
                   ) : r.incidents > 0 ? (
                     <span className="px-2 py-0.5 rounded-[4px] bg-purple-950/40 text-purple-300 border border-purple-800/50 font-mono text-[10px] flex items-center gap-1 w-fit">
-                      <span>⚠️</span> {r.incidents} Incidente(s)
+                      {r.incidents} Incidente(s)
                     </span>
                   ) : (
                     <span className="px-2 py-0.5 rounded-[4px] bg-[#18181b] text-emerald-400 border border-emerald-900/40 font-mono text-[10px]">

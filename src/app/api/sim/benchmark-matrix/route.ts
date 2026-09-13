@@ -198,7 +198,7 @@ export async function GET(request: Request) {
       durationMin,
       halfTick,
       agent_a: {
-        name: 'The Economist 🧊 (DQN)',
+        name: 'The Economist (DQN)',
         gross: agentA.currentEarnings,
         km: agentA.totalKm,
         orders: agentA.completedOrders,
@@ -213,7 +213,7 @@ export async function GET(request: Request) {
         trapped: agentA.status === 'trapped_in_closure',
       },
       agent_b: {
-        name: 'The Hustler ⚡ (OR-Tools+XGB)',
+        name: 'The Hustler (OR-Tools+XGB)',
         gross: agentB.currentEarnings,
         km: agentB.totalKm,
         orders: agentB.completedOrders,
@@ -228,7 +228,7 @@ export async function GET(request: Request) {
         trapped: agentB.status === 'trapped_in_closure',
       },
       baseline: {
-        name: 'Traditional Baseline 📱 (FIFO Naive)',
+        name: 'Traditional Baseline (FIFO Naive)',
         gross: base.currentEarnings,
         km: base.totalKm,
         orders: base.completedOrders,

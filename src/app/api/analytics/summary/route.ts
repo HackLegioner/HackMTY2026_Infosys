@@ -16,9 +16,9 @@ export async function GET() {
         summary: {
           totalShifts: 1,
           agents: {
-            agent_a: { name: 'The Economist 🧊', totalEarnings: 450, totalKm: 22.4, efficiencyMxnPerKm: 20.08, acceptanceRate: '28%' },
-            agent_b: { name: 'The Hustler ⚡', totalEarnings: 620, totalKm: 34.8, efficiencyMxnPerKm: 17.81, acceptanceRate: '64%' },
-            baseline: { name: 'Traditional Baseline 📱', totalEarnings: 310, totalKm: 29.5, efficiencyMxnPerKm: 10.51, acceptanceRate: '85%' },
+            agent_a: { name: 'The Economist', totalEarnings: 450, totalKm: 22.4, efficiencyMxnPerKm: 20.08, acceptanceRate: '28%' },
+            agent_b: { name: 'The Hustler', totalEarnings: 620, totalKm: 34.8, efficiencyMxnPerKm: 17.81, acceptanceRate: '64%' },
+            baseline: { name: 'Traditional Baseline', totalEarnings: 310, totalKm: 29.5, efficiencyMxnPerKm: 10.51, acceptanceRate: '85%' },
           },
         },
       });
@@ -93,7 +93,7 @@ export async function GET() {
         completedShifts: stats.completedShifts,
         agents: {
           agent_a: {
-            name: 'The Economist 🧊',
+            name: 'The Economist',
             strategy: 'DQN Reinforcement Learning',
             totalEarnings: Math.round(stats.totalAgentAEarnings || 0),
             totalKm: Math.round(stats.totalAgentAKm || 0),
@@ -101,7 +101,7 @@ export async function GET() {
             acceptanceRate: decisionsByAgent['agent_a']?.acceptanceRate || '30%',
           },
           agent_b: {
-            name: 'The Hustler ⚡',
+            name: 'The Hustler',
             strategy: 'OR-Tools CVRPTW + Kaggle Calibrated XGBoost',
             totalEarnings: Math.round(stats.totalAgentBEarnings || 0),
             totalKm: Math.round(stats.totalAgentBKm || 0),
@@ -109,7 +109,7 @@ export async function GET() {
             acceptanceRate: decisionsByAgent['agent_b']?.acceptanceRate || '65%',
           },
           baseline: {
-            name: 'Traditional Baseline 📱',
+            name: 'Traditional Baseline',
             strategy: 'FIFO Naive Queue',
             totalEarnings: Math.round(stats.totalBaselineEarnings || 0),
             totalKm: Math.round(stats.totalBaselineKm || 0),

@@ -34,7 +34,7 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
               className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-              <span>⚡ Surge 2.5x</span>
+              <span>Surge 2.5x</span>
             </button>
             <button
               onClick={() => onTriggerEvent(0)}
@@ -42,7 +42,7 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
               className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-              <span>🚧 Inundación Constitución</span>
+              <span>Inundación Constitución</span>
             </button>
             <button
               onClick={() => onTriggerEvent(2)}
@@ -50,7 +50,7 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
               className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-              <span>⚽ Clásico Regio BBVA</span>
+              <span>Clásico Regio BBVA</span>
             </button>
             <button
               onClick={() => onTriggerEvent(4)}
@@ -58,7 +58,7 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
               className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
-              <span>⛈️ Tormenta Torrencial</span>
+              <span>Tormenta Torrencial</span>
             </button>
             <button
               onClick={() => onTriggerEvent(3)}
@@ -66,7 +66,7 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
               className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
-              <span>🚧 Bloqueo Gonzalitos</span>
+              <span>Bloqueo Gonzalitos</span>
             </button>
             <button
               onClick={() => onTriggerEvent(5)}
@@ -74,7 +74,7 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
               className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
-              <span>⚠️ Riesgo Independencia</span>
+              <span>Riesgo Independencia</span>
             </button>
           </div>
         )}
