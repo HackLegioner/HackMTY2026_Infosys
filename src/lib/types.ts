@@ -27,6 +27,8 @@ export interface Order {
   estimated_time_min: number;
   expires_in_seconds: number;
   expireAtTick?: number;
+  pickedUp?: boolean;
+  assignedAtTick?: number;
 }
 
 export interface DisruptionEvent {
@@ -45,6 +47,17 @@ export interface DisruptionEvent {
 
 export type DisasterEvent = DisruptionEvent;
 
+export interface CourierStop {
+  type: 'pickup' | 'dropoff';
+  orderId: string;
+  target: Coordinates;
+  targetName: string;
+  waitTicksRemaining: number;
+  waypoints?: Coordinates[];
+  waypointIndex?: number;
+  totalRouteKm?: number;
+}
+
 export interface CourierTask {
   orderId: string;
   phase: 'to_pickup' | 'waiting' | 'to_dropoff';
@@ -54,6 +67,7 @@ export interface CourierTask {
   waypoints?: Coordinates[];
   waypointIndex?: number;
   totalRouteKm?: number;
+  stopQueue?: CourierStop[];
 }
 
 export interface CourierState {
@@ -67,9 +81,16 @@ export interface CourierState {
   activeRoute: Coordinates[];
   carryingOrders: Order[];
   currentTask?: CourierTask;
-  status: 'idle' | 'moving_to_pickup' | 'waiting_at_pickup' | 'delivering';
+  status: 'idle' | 'moving_to_pickup' | 'waiting_at_pickup' | 'delivering' | 'trapped_in_closure';
   speedKmh?: number;
   corridorName?: string;
+  penaltiesMXN?: number;
+  fuelCostMXN?: number;
+  netEarnings?: number;
+  incidentsCount?: number;
+  consecutiveSkips?: number;
+  dispatchCooldownTicks?: number;
+  lateDeliveriesCount?: number;
 }
 
 export interface AgentDecisionData {
@@ -85,6 +106,8 @@ export interface AgentDecisionData {
   primary_reasoning: string;
   detailed_reasoning?: Record<string, any>;
   profit_per_km?: number;
+  penalties_total?: number;
+  net_earnings_total?: number;
 }
 
 export interface ShiftState {

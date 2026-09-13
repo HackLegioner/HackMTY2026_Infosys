@@ -25,6 +25,7 @@ export function haversineDistanceKm(
 
 // In-memory route cache so repeated trips or nearby points resolve in 0ms
 const routeCache = new Map<string, RouteResult>();
+let lastPublicOsrmFailure = 0;
 
 function getCacheKey(
   start: { lat: number; lng: number },
@@ -114,29 +115,31 @@ export async function fetchRoute(
     // Local OSRM not running, try public OSRM router
   }
 
-  // 2. Try public OSRM router (car navigation with full OpenStreetMap geometry)
-  try {
-    const publicUrl = `http://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
-    const res = await fetch(publicUrl, { signal: AbortSignal.timeout(3000) });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.routes && data.routes.length > 0) {
-        const route = data.routes[0];
-        const waypoints = route.geometry.coordinates.map(([lng, lat]: [number, number]) => ({
-          lat,
-          lng,
-        }));
-        const result: RouteResult = {
-          distanceKm: Math.round((route.distance / 1000) * 100) / 100,
-          durationMin: Math.round((route.duration / 60) * 10) / 10,
-          waypoints,
-        };
-        routeCache.set(cacheKey, result);
-        return result;
+  // 2. Try public OSRM router if not recently failing
+  if (Date.now() - lastPublicOsrmFailure > 30000) {
+    try {
+      const publicUrl = `http://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+      const res = await fetch(publicUrl, { signal: AbortSignal.timeout(600) });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          const waypoints = route.geometry.coordinates.map(([lng, lat]: [number, number]) => ({
+            lat,
+            lng,
+          }));
+          const result: RouteResult = {
+            distanceKm: Math.round((route.distance / 1000) * 100) / 100,
+            durationMin: Math.round((route.duration / 60) * 10) / 10,
+            waypoints,
+          };
+          routeCache.set(cacheKey, result);
+          return result;
+        }
       }
+    } catch (_err) {
+      lastPublicOsrmFailure = Date.now();
     }
-  } catch (_err) {
-    // Public OSRM unreachable or timed out
   }
 
   // 3. Fallback to realistic Monterrey arterial street waypoints

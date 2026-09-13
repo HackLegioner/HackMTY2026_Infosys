@@ -20,6 +20,13 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
   courier,
 }) => {
   const getStatusBadge = () => {
+    if ((courier.dispatchCooldownTicks || 0) > 0) {
+      return (
+        <span className="text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/40 flex items-center gap-1 font-mono font-bold animate-pulse">
+          <span>⏳</span> Cooldown App ({courier.dispatchCooldownTicks}m)
+        </span>
+      );
+    }
     switch (courier.status) {
       case 'moving_to_pickup':
         return (
@@ -41,6 +48,12 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
             Delivering ➔ {courier.currentTask?.targetName || 'Customer'}
           </span>
         );
+      case 'trapped_in_closure':
+        return (
+          <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1 font-mono font-bold animate-pulse">
+            <span>🚧</span> Atrapado en Cierre (4 km/h)
+          </span>
+        );
       default:
         return (
           <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">
@@ -49,6 +62,8 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
         );
     }
   };
+
+  const net = courier.netEarnings ?? courier.currentEarnings;
 
   return (
     <div
@@ -66,7 +81,15 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
         </div>
 
         <div className="flex justify-between items-center my-3">
-          <EarningsCounter amount={courier.currentEarnings} />
+          <div>
+            <EarningsCounter amount={courier.currentEarnings} />
+            <span className="text-[11px] font-mono text-slate-400 block mt-0.5">
+              Neto:{' '}
+              <strong className={net < 0 ? 'text-rose-400' : 'text-emerald-400'}>
+                ${net.toFixed(1)} MXN
+              </strong>
+            </span>
+          </div>
           {getStatusBadge()}
         </div>
 
@@ -90,11 +113,37 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
             </span>
           </div>
           <div>
-            <span className="text-slate-400 block">Profit Density</span>
+            <span className="text-slate-400 block">Incidentes / Multas</span>
+            <span
+              className={`font-mono font-bold text-sm ${
+                courier.incidentsCount ? 'text-rose-400' : 'text-emerald-400'
+              }`}
+            >
+              {courier.incidentsCount
+                ? `⚠️ ${courier.incidentsCount} (-$${courier.penaltiesMXN || 0})`
+                : '🛡️ 0 (Seguro)'}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-400 block">Rechazos / Cooldown</span>
+            <span
+              className={`font-mono font-bold text-sm ${
+                (courier.dispatchCooldownTicks || 0) > 0
+                  ? 'text-purple-400 animate-pulse'
+                  : (courier.consecutiveSkips || 0) >= 3
+                  ? 'text-amber-400'
+                  : 'text-slate-300'
+              }`}
+            >
+              {(courier.dispatchCooldownTicks || 0) > 0
+                ? `⏳ ${courier.dispatchCooldownTicks}m cooldown`
+                : `${courier.consecutiveSkips || 0}/4 seguidos (${courier.skippedOrders} tot)`}
+            </span>
+          </div>
+          <div>
+            <span className="text-slate-400 block">Eficiencia $/km</span>
             <span className="text-slate-200 font-mono font-bold text-sm">
-              {courier.totalKm > 0
-                ? `$${(courier.currentEarnings / courier.totalKm).toFixed(1)} / km`
-                : '$0.0 / km'}
+              ${courier.totalKm > 0 ? (net / courier.totalKm).toFixed(1) : '0.0'}/km
             </span>
           </div>
         </div>

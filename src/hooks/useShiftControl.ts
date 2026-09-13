@@ -61,5 +61,37 @@ export function useShiftControl() {
     }
   };
 
-  return { startShift, stopShift, triggerDisaster, loading, error };
+  const changeSpeed = async (shiftId: string, tickSpeedMs: number) => {
+    try {
+      const res = await fetch(`/api/sim/speed/${shiftId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tickSpeedMs }),
+      });
+      return await res.json();
+    } catch (err) {
+      console.error('Change speed error:', err);
+      return null;
+    }
+  };
+
+  const fastForward = async (shiftId: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/sim/speed/${shiftId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fastForward: true }),
+      });
+      const data = await res.json();
+      return data;
+    } catch (err) {
+      console.error('Fast forward error:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { startShift, stopShift, triggerDisaster, changeSpeed, fastForward, loading, error };
 }
