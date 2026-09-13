@@ -1,4 +1,4 @@
-# How It Works — The Courier Engine
+# How It Works — DeliMan Engine
 
 > **Real-Time Multi-Agent AI Courier Optimization Engine for Monterrey, Mexico**  
 > Built for HackMTY 2026 (Infosys Challenge #3)
@@ -12,7 +12,7 @@ In modern gig-economy delivery platforms (Uber Eats, Rappi, DiDi Food), couriers
 - Waiting idle in kitchens for slow meals (25+ minutes for buffet or gourmet dishes) while earning zero revenue.
 - Traveling across mountains without accounting for natural topographical barriers (e.g., Loma Larga).
 
-**The Courier** demonstrates how specialized AI agents optimize delivery operations in real time using **empirical datasets (Kaggle Food Delivery Dataset)**, **live weather conditions (Open-Meteo API)**, and **realistic street-level routing (OSRM)** over the actual urban road network of Monterrey, Nuevo León.
+**DeliMan** demonstrates how specialized AI agents optimize delivery operations in real time using **empirical datasets (Kaggle Food Delivery Dataset)**, **live weather conditions (Open-Meteo API)**, and **realistic street-level routing (OSRM)** over the actual urban road network of Monterrey, Nuevo León.
 
 ---
 
@@ -88,7 +88,7 @@ Instead of assuming static travel speeds, the simulator models Monterrey's empir
 ### 3.  OSRM Real Street Waypoint Routing
 - **Eliminating "Mountain Cutting"**:
   - Monterrey is surrounded by mountains (Cerro de la Silla, Sierra Madre Oriental, Loma Larga). Traditional mock simulations draw diagonal lines straight across mountains and buildings.
-  - **The Courier** computes real street geometry using OSRM. When routing between San Pedro and Monterrey Centro, couriers are strictly navigated through the **Túnel de la Loma Larga** or arterial freeway corridors.
+  - **DeliMan** computes real street geometry using OSRM. When routing between San Pedro and Monterrey Centro, couriers are strictly navigated through the **Túnel de la Loma Larga** or arterial freeway corridors.
 - **Three-Phase Delivery State Machine**:
   1. `to_pickup`: Courier navigates along street waypoints to the restaurant.
   2. `waiting_at_pickup`: Courier waits at kitchen for order preparation.

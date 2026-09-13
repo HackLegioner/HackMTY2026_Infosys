@@ -37,7 +37,7 @@ function AuditContent() {
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] font-sans">
       {/* Top Navbar */}
-      <TopNavbar showBrand={true} brandTitle="The Courier" activeTab="audit" />
+      <TopNavbar showBrand={true} brandTitle="DeliMan" activeTab="audit" />
 
       {/* Main Container */}
       <main className="max-w-[1500px] mx-auto px-6 sm:px-10 py-6 space-y-6">

@@ -106,7 +106,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] font-sans">
       {/* Top Navbar */}
-      <TopNavbar showBrand={true} brandTitle="The Courier" activeTab="home" />
+      <TopNavbar showBrand={true} brandTitle="DeliMan" activeTab="home" />
 
       {/* Main Container */}
       <main className="max-w-[1600px] mx-auto px-6 sm:px-10 py-6 space-y-6">
@@ -114,7 +114,7 @@ export default function Home() {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-[#fafafa] tracking-tight flex items-center gap-2.5">
-              <span>The Courier</span>
+              <span>DeliMan</span>
               <span className="text-xs font-mono font-medium px-2 py-0.5 rounded-md bg-[#18181b] border border-[#27272a] text-[#a1a1aa]">
                 v2.1
               </span>

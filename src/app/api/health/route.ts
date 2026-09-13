@@ -105,7 +105,7 @@ export async function GET() {
   return NextResponse.json(
     {
       status: isHealthy ? 'healthy' : 'degraded',
-      app: 'The Courier — Next.js 14 Full-Stack',
+      app: 'DeliMan — Next.js 14 Full-Stack',
       version: '2.0.0-market',
       timestamp,
       checks,

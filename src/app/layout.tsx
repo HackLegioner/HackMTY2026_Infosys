@@ -4,8 +4,15 @@ import 'leaflet/dist/leaflet.css';
 import { ThemeProvider } from '@/context/ThemeContext';
 
 export const metadata: Metadata = {
-  title: 'The Courier — AI Optimization Engine',
+  title: 'DeliMan — AI Optimization Engine',
   description: 'Real-time multi-agent courier routing and earnings optimization for Monterrey',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export default function RootLayout({

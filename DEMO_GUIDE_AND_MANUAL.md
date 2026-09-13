@@ -1,7 +1,7 @@
-# The Courier — Manual de Uso, Flujo de Navegación & Pitch Playbook
+# DeliMan — Manual de Uso, Flujo de Navegación & Pitch Playbook
 
 > **Guía Oficial de Operación, Catálogo de Acciones y Guión de Demostración para Jueces e Inversionistas**  
-> **Proyecto**: *The Courier — Motor de Optimización Multi-Agente en Tiempo Real para Monterrey*  
+> **Proyecto**: *DeliMan — Motor de Optimización Multi-Agente en Tiempo Real para Monterrey*  
 > **HackMTY 2026** — *Infosys Challenge #3*
 
 ---
@@ -156,8 +156,8 @@ sequenceDiagram
    > - *El costo de combustible ($0.70/km) se redujo un 30% gracias al ruteo inteligente por corredores viales."*
 3. **Acción**: Haz clic en **"Panel de Auditoría"** en la barra superior o en `/audit`. Clic en **"Shift Activo"** y luego en **"Gov Auditor"**.
 4. **Pitch de Compliance & Enterprise**:
-   > *"A diferencia de sistemas opacos que usan LLMs lentos y costosos, The Courier utiliza una arquitectura **Zero-LLM Runtime**. Cada decisión matemática es 100% determinista, explicable, auditable bajo 3 niveles de seguridad (Public, Business, Gov) y respaldada en MongoDB Atlas.*
-   > *Esto hace a The Courier la primera plataforma de optimización logística lista para certificación regulatoria empresarial y adopción masiva en flotas urbanas."*
+   > *"A diferencia de sistemas opacos que usan LLMs lentos y costosos, DeliMan utiliza una arquitectura **Zero-LLM Runtime**. Cada decisión matemática es 100% determinista, explicable, auditable bajo 3 niveles de seguridad (Public, Business, Gov) y respaldada en MongoDB Atlas.*
+   > *Esto hace a DeliMan la primera plataforma de optimización logística lista para certificación regulatoria empresarial y adopción masiva en flotas urbanas."*
 5. **Cierre**: En `/driver`, haz clic en **"Exportar Reporte de Turno (JSON)"** para mostrar la descarga de telemetría completa.
 
 ---

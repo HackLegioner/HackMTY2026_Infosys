@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTheme } from '@/context/ThemeContext';
 
 interface TopNavbarProps {
@@ -19,7 +20,7 @@ interface TopNavbarProps {
 
 export const TopNavbar: React.FC<TopNavbarProps> = ({
   showBrand = false,
-  brandTitle = 'The Courier',
+  brandTitle = 'DeliMan',
   activeTab,
   userName = 'Admin',
   userRoleLabel = 'Usuario actual',
@@ -86,7 +87,14 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
       <div className="flex items-center gap-6">
         {showBrand && (
           <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition">
-            <div className="w-3.5 h-3.5 rounded-[2px] bg-[#fafafa]" />
+            <Image
+              src="/logo.svg"
+              alt="DeliMan Logo"
+              width={26}
+              height={26}
+              className="w-[26px] h-[26px] rounded-[6px] object-contain shrink-0"
+              priority
+            />
             <span className="font-semibold text-sm tracking-tight text-[#fafafa]">
               {brandTitle}
             </span>

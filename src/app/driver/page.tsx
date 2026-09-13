@@ -244,7 +244,7 @@ export default function DriverDashboardPage() {
 
   const handleExportReport = () => {
     const reportData = {
-      title: 'The Courier — Monterrey Multi-Agent Shift Report',
+      title: 'DeliMan — Monterrey Multi-Agent Shift Report',
       exportedAt: new Date().toISOString(),
       shiftId: activeShiftId || 'offline_preview',
       currentTick: shiftState?.tick || 0,
@@ -295,7 +295,7 @@ export default function DriverDashboardPage() {
   return (
     <div className="min-h-screen bg-[#09090b] text-[#fafafa] font-sans">
       {/* Top Navbar */}
-      <TopNavbar showBrand={true} brandTitle="The Courier" activeTab="driver" />
+      <TopNavbar showBrand={true} brandTitle="DeliMan" activeTab="driver" />
 
       {/* Main Container */}
       <main className="max-w-[1600px] mx-auto px-6 sm:px-10 py-6 space-y-6">

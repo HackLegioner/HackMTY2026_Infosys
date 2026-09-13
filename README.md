@@ -1,4 +1,4 @@
-# The Courier — HackMTY 2026 (Infosys Challenge #3)
+# DeliMan — HackMTY 2026 (Infosys Challenge #3)
 
 > **Real-time multi-agent AI courier optimization engine for Monterrey, Mexico.**  
 > Compares two competing AI agents (**Agent A: The Economist** and **Agent B: The Hustler**) against a traditional delivery app baseline in a simulated real-world shift with live Monterrey geography, surge pricing, and urban disruption scenarios.
