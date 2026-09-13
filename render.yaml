@@ -1,0 +1,36 @@
+﻿services:
+  # 1. DeliMan Next.js 14 Web Application
+  - type: web
+    name: deliman-app
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: MONGODB_URI
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: GOV_API_KEY
+        value: courier_gov_2026
+      - key: BIZ_API_KEY
+        value: courier_biz_2026
+      - key: PYTHON_AGENT_URL
+        sync: false
+
+  # 2. Optional: Python Agent Microservice (FastAPI + OR-Tools + XGBoost)
+  - type: web
+    name: deliman-python-agents
+    runtime: docker
+    dockerfilePath: ./python-agents/Dockerfile
+    dockerContext: ./python-agents
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8001
