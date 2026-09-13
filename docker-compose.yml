@@ -1,8 +1,26 @@
 services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: deliman-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PYTHON_AGENT_URL=http://python-agents:8001
+      - MONGODB_URI=mongodb://mongo:27017/courier-ai
+    depends_on:
+      - python-agents
+      - mongo
+    restart: unless-stopped
+
   python-agents:
     build:
       context: ./python-agents
       dockerfile: Dockerfile
+    container_name: deliman-python-agents
     ports:
       - "8001:8001"
     environment:
@@ -11,17 +29,9 @@ services:
       - ./python-agents:/app
     restart: unless-stopped
 
-  osrm:
-    image: osrm/osrm-backend:latest
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./data/osrm:/data
-    command: osrm-routed --algorithm mld /data/monterrey.osrm
-    restart: unless-stopped
-
   mongo:
     image: mongo:7.0
+    container_name: deliman-mongo
     ports:
       - "27017:27017"
     environment:
@@ -29,6 +39,18 @@ services:
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped
+
+  osrm:
+    image: osrm/osrm-backend:latest
+    container_name: deliman-osrm
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data/osrm:/data
+    command: osrm-routed --algorithm mld /data/monterrey.osrm
+    restart: unless-stopped
+    profiles:
+      - with-osrm
 
 volumes:
   mongo_data:
