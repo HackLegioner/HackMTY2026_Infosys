@@ -29,6 +29,18 @@ export function getOrCreateShift(
   seed: number = 42,
   tickSpeedMs: number = 1000
 ): ShiftEngine {
+  // Prevent memory leaks and CPU spikes on Render free tier (512MB RAM limit):
+  // Clean up any other running shift when a new shift is initiated
+  for (const [existingId, existingEngine] of shiftsMap.entries()) {
+    if (existingId !== shiftId) {
+      if (existingEngine.isRunning) {
+        console.log(`[ShiftEngine] Stopping previous shift ${existingId} to conserve resources`);
+        existingEngine.stop();
+      }
+      shiftsMap.delete(existingId);
+    }
+  }
+
   if (!shiftsMap.has(shiftId)) {
     const engine = new ShiftEngine(shiftId, durationMin, seed, tickSpeedMs);
     shiftsMap.set(shiftId, engine);

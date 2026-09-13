@@ -54,12 +54,16 @@ export function useShiftStream(shiftId: string | null) {
       }
     };
 
-    // Polling backup interval (ensures live ticks flow seamlessly)
+    // Polling backup interval (only fires if SSE stream is disconnected or reconnecting)
     const backupInterval = setInterval(async () => {
       if (!isMounted) return;
+      // If SSE is open and streaming, skip polling to avoid overloading Render free tier
+      if (eventSource.readyState === EventSource.OPEN) return;
+
       try {
         const res = await fetch(`/api/sim/status/${shiftId}`);
-        if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
           const data = await res.json();
           if (data.state && isMounted) {
             setState(data.state);
@@ -67,7 +71,7 @@ export function useShiftStream(shiftId: string | null) {
           }
         }
       } catch (_err) {}
-    }, 1000);
+    }, 3000);
 
     return () => {
       isMounted = false;

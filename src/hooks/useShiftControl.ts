@@ -3,6 +3,28 @@
 import { useState } from 'react';
 import { ShiftState } from '@/lib/types';
 
+async function safeJsonFetch<T = any>(
+  url: string,
+  options?: RequestInit,
+  defaultErrorMsg: string = 'Error de comunicación'
+): Promise<T> {
+  const res = await fetch(url, options);
+  const contentType = res.headers.get('content-type') || '';
+
+  if (!contentType.includes('application/json')) {
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new Error('El servidor se está reconectando en Render. Por favor reintenta en un momento.');
+    }
+    throw new Error(`${defaultErrorMsg} (HTTP ${res.status})`);
+  }
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || defaultErrorMsg);
+  }
+  return data;
+}
+
 export function useShiftControl() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,16 +37,18 @@ export function useShiftControl() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/sim/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ durationMin, seed, tickSpeedMs }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to start shift');
+      const data = await safeJsonFetch<{ shiftId: string; state: ShiftState }>(
+        '/api/sim/start',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ durationMin, seed, tickSpeedMs }),
+        },
+        'No se pudo iniciar el turno'
+      );
       return { shiftId: data.shiftId, state: data.state };
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error starting shift');
+      setError(err instanceof Error ? err.message : 'Error iniciando turno');
       return null;
     } finally {
       setLoading(false);
@@ -35,12 +59,13 @@ export function useShiftControl() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/sim/stop/${shiftId}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to stop shift');
-      return data;
+      return await safeJsonFetch(
+        `/api/sim/stop/${shiftId}`,
+        { method: 'DELETE' },
+        'No se pudo detener el turno'
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error stopping shift');
+      setError(err instanceof Error ? err.message : 'Error deteniendo turno');
       return null;
     } finally {
       setLoading(false);
@@ -49,12 +74,15 @@ export function useShiftControl() {
 
   const triggerDisaster = async (shiftId: string, presetIndex?: number) => {
     try {
-      const res = await fetch(`/api/sim/event/${shiftId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ presetIndex }),
-      });
-      return await res.json();
+      return await safeJsonFetch(
+        `/api/sim/event/${shiftId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ presetIndex }),
+        },
+        'No se pudo inyectar el evento'
+      );
     } catch (err) {
       console.error('Trigger event error:', err);
       return null;
@@ -63,12 +91,15 @@ export function useShiftControl() {
 
   const changeSpeed = async (shiftId: string, tickSpeedMs: number) => {
     try {
-      const res = await fetch(`/api/sim/speed/${shiftId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tickSpeedMs }),
-      });
-      return await res.json();
+      return await safeJsonFetch(
+        `/api/sim/speed/${shiftId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tickSpeedMs }),
+        },
+        'No se pudo ajustar la velocidad'
+      );
     } catch (err) {
       console.error('Change speed error:', err);
       return null;
@@ -78,13 +109,15 @@ export function useShiftControl() {
   const fastForward = async (shiftId: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/sim/speed/${shiftId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fastForward: true }),
-      });
-      const data = await res.json();
-      return data;
+      return await safeJsonFetch(
+        `/api/sim/speed/${shiftId}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fastForward: true }),
+        },
+        'No se pudo acelerar el turno'
+      );
     } catch (err) {
       console.error('Fast forward error:', err);
       return null;
