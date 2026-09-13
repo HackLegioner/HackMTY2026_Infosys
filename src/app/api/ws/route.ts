@@ -10,9 +10,9 @@ export function GET(request: Request) {
   // Resilient lookup: active or create
   const engine = getActiveShift(shiftId) || getOrCreateShift(shiftId);
 
-  // Auto-start engine if not running
-  if (!engine.timer) {
-    engine.start();
+  // Auto-start engine if not currently running and shift has ticks remaining
+  if (!engine.isRunning && engine.state.elapsedMinutes < engine.state.totalMinutes) {
+    engine.start().catch((err) => console.error('[WS Route] Auto-start error:', err));
   }
 
   // SSE stream implementation

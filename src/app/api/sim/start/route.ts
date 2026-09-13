@@ -26,7 +26,10 @@ export async function POST(request: Request) {
       parsed.data.tickSpeedMs
     );
 
-    await engine.start();
+    // Start engine in background so response returns instantly (<5ms)
+    engine.start().catch((err) => {
+      console.error('[ShiftEngine] Error during engine start:', err);
+    });
 
     return NextResponse.json({
       ok: true,

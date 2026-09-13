@@ -1,14 +1,30 @@
-'use client';
-
-import React, { useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline } from 'react-leaflet';
+import React, { useMemo, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ShiftState } from '@/lib/types';
 import { MONTERREY_ZONES } from '@/lib/simulator/orderStream';
 
+function MapController() {
+  const map = useMap();
+  useEffect(() => {
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 150);
+    const t2 = setTimeout(() => map.invalidateSize(), 600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [map]);
+  return null;
+}
+
+const isValidCoord = (lat: any, lng: any) =>
+  typeof lat === 'number' && !isNaN(lat) && typeof lng === 'number' && !isNaN(lng) && lat !== 0 && lng !== 0;
+
 interface LeafletMapInnerProps {
   shiftState: ShiftState | null;
 }
+
 
 export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) => {
   const center: [number, number] = [25.6692, -100.3099]; // Monterrey Centro
@@ -119,9 +135,62 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     []
   );
 
-  const courierA = shiftState?.agents.agent_a;
-  const courierB = shiftState?.agents.agent_b;
-  const courierBase = shiftState?.agents.baseline;
+  const courierA = shiftState?.agents.agent_a || {
+    agentId: 'agent_a' as const,
+    lat: 25.6692,
+    lng: -100.3099,
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+    activeRoute: [],
+    carryingOrders: [],
+    status: 'idle' as const,
+    speedKmh: 25.0,
+    corridorName: 'Monterrey Zona Metropolitana',
+    penaltiesMXN: 0,
+    fuelCostMXN: 0,
+    netEarnings: 0,
+    incidentsCount: 0,
+  };
+
+  const courierB = shiftState?.agents.agent_b || {
+    agentId: 'agent_b' as const,
+    lat: 25.6574,
+    lng: -100.3684,
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+    activeRoute: [],
+    carryingOrders: [],
+    status: 'idle' as const,
+    speedKmh: 25.0,
+    corridorName: 'Monterrey Zona Metropolitana',
+    penaltiesMXN: 0,
+    fuelCostMXN: 0,
+    netEarnings: 0,
+    incidentsCount: 0,
+  };
+
+  const courierBase = shiftState?.agents.baseline || {
+    agentId: 'baseline' as const,
+    lat: 25.6514,
+    lng: -100.2895,
+    currentEarnings: 0,
+    totalKm: 0,
+    completedOrders: 0,
+    skippedOrders: 0,
+    activeRoute: [],
+    carryingOrders: [],
+    status: 'idle' as const,
+    speedKmh: 25.0,
+    corridorName: 'Monterrey Zona Metropolitana',
+    penaltiesMXN: 0,
+    fuelCostMXN: 0,
+    netEarnings: 0,
+    incidentsCount: 0,
+  };
 
   return (
     <MapContainer
@@ -129,14 +198,17 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       zoom={11}
       scrollWheelZoom={true}
       className="w-full h-full rounded-xl"
-      style={{ background: '#0A0E1A' }}
+      style={{ width: '100%', height: '100%', minHeight: '520px', background: '#0A0E1A' }}
     >
-      {/* 100% Free OpenStreetMap tile server with dark mode CSS filter - No API key required */}
+      <MapController />
+      {/* High-speed, dark-themed CartoDB Dark Matter tile server */}
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-        className="dark-tiles"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        subdomains="abcd"
+        maxZoom={19}
       />
+
 
       {/* Static Monterrey Hotspot Hubs (Recolección y Entrega) */}
       {MONTERREY_ZONES.map((z) => {
@@ -279,32 +351,38 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       })}
 
       {/* Courier A Route Polyline */}
-      {courierA && courierA.activeRoute.length > 1 && (
+      {courierA && courierA.activeRoute && courierA.activeRoute.length > 1 && (
         <Polyline
-          positions={courierA.activeRoute.map((p) => [p.lat, p.lng])}
+          positions={courierA.activeRoute
+            .filter((p) => isValidCoord(p?.lat, p?.lng))
+            .map((p) => [p.lat, p.lng])}
           pathOptions={{ color: '#3B82F6', weight: 4, opacity: 0.85 }}
         />
       )}
 
       {/* Courier B Route Polyline */}
-      {courierB && courierB.activeRoute.length > 1 && (
+      {courierB && courierB.activeRoute && courierB.activeRoute.length > 1 && (
         <Polyline
-          positions={courierB.activeRoute.map((p) => [p.lat, p.lng])}
+          positions={courierB.activeRoute
+            .filter((p) => isValidCoord(p?.lat, p?.lng))
+            .map((p) => [p.lat, p.lng])}
           pathOptions={{ color: '#10B981', weight: 4, opacity: 0.85 }}
         />
       )}
 
       {/* Baseline Route Polyline */}
-      {courierBase && courierBase.activeRoute.length > 1 && (
+      {courierBase && courierBase.activeRoute && courierBase.activeRoute.length > 1 && (
         <Polyline
-          positions={courierBase.activeRoute.map((p) => [p.lat, p.lng])}
+          positions={courierBase.activeRoute
+            .filter((p) => isValidCoord(p?.lat, p?.lng))
+            .map((p) => [p.lat, p.lng])}
           pathOptions={{ color: '#94A3B8', weight: 3, opacity: 0.65, dashArray: '4, 4' }}
         />
       )}
 
       {/* Target Destination Markers (Pickup / Dropoff) */}
       {[courierA, courierB, courierBase].map((c) => {
-        if (!c?.currentTask?.target) return null;
+        if (!c?.currentTask?.target || !isValidCoord(c.currentTask.target.lat, c.currentTask.target.lng)) return null;
         const isPickup = c.currentTask.phase === 'to_pickup';
         return (
           <Marker
@@ -324,7 +402,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       })}
 
       {/* Agent A Marker */}
-      {courierA && (
+      {courierA && isValidCoord(courierA.lat, courierA.lng) && (
         <Marker position={[courierA.lat, courierA.lng]} icon={iconAgentA}>
           <Popup className="text-slate-900 text-xs">
             <strong className="text-blue-600">Agent A — The Economist 🧊</strong>
@@ -341,7 +419,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       )}
 
       {/* Agent B Marker */}
-      {courierB && (
+      {courierB && isValidCoord(courierB.lat, courierB.lng) && (
         <Marker position={[courierB.lat, courierB.lng]} icon={iconAgentB}>
           <Popup className="text-slate-900 text-xs">
             <strong className="text-emerald-600">Agent B — The Hustler ⚡</strong>
@@ -358,7 +436,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       )}
 
       {/* Baseline Marker */}
-      {courierBase && (
+      {courierBase && isValidCoord(courierBase.lat, courierBase.lng) && (
         <Marker position={[courierBase.lat, courierBase.lng]} icon={iconBaseline}>
           <Popup className="text-slate-900 text-xs">
             <strong className="text-slate-700">Traditional App Baseline 📱</strong>
