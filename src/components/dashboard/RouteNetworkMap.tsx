@@ -4,13 +4,13 @@ import React from 'react';
 
 export const RouteNetworkMap: React.FC = () => {
   return (
-    <div className="relative w-full h-[220px] bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-4 flex flex-col justify-between overflow-hidden shadow-sm">
+    <div className="relative w-full h-[220px] bg-[#121215] rounded-md border border-[#27272a] p-4 flex flex-col justify-between overflow-hidden">
       {/* Header */}
       <div className="flex justify-between items-center z-10">
-        <h4 className="text-xs font-bold text-[#09090B] dark:text-zinc-100 tracking-tight">
+        <h4 className="text-xs font-bold text-[#fafafa] tracking-tight">
           Rutas de Reparto (Zona Centro)
         </h4>
-        <span className="text-[10px] font-mono tracking-widest text-[#71717A] dark:text-zinc-400 uppercase font-semibold">
+        <span className="text-[10px] font-mono tracking-widest text-[#71717a] uppercase font-medium">
           LIVE MAP
         </span>
       </div>
@@ -19,7 +19,7 @@ export const RouteNetworkMap: React.FC = () => {
       <div className="relative w-full h-full flex items-center justify-center my-1">
         <svg
           viewBox="0 0 300 160"
-          className="w-full h-full max-h-[150px] text-zinc-900 dark:text-zinc-100"
+          className="w-full h-full max-h-[150px] text-[#fafafa]"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -69,15 +69,14 @@ export const RouteNetworkMap: React.FC = () => {
 
           {/* Node 1: REP-1 Tag */}
           <g transform="translate(48, 42)">
-            <rect x="0" y="0" width="34" height="15" rx="7.5" fill="#09090B" className="dark:fill-zinc-100" />
+            <rect x="0" y="0" width="34" height="15" rx="3" fill="#18181b" stroke="#27272a" strokeWidth="1" />
             <text
               x="17"
               y="10.5"
               textAnchor="middle"
-              fill="#FFFFFF"
-              className="dark:fill-zinc-900"
+              fill="#fafafa"
               fontSize="8"
-              fontFamily="monospace"
+              fontFamily="JetBrains Mono, monospace"
               fontWeight="bold"
             >
               REP-1
@@ -86,15 +85,14 @@ export const RouteNetworkMap: React.FC = () => {
 
           {/* Node 2: DEST Tag */}
           <g transform="translate(225, 92)">
-            <rect x="0" y="0" width="32" height="15" rx="7.5" fill="#FFFFFF" stroke="#09090B" strokeWidth="1" className="dark:fill-zinc-900 dark:stroke-zinc-100" />
+            <rect x="0" y="0" width="32" height="15" rx="3" fill="#ffffff" />
             <text
               x="16"
               y="10.5"
               textAnchor="middle"
-              fill="#09090B"
-              className="dark:fill-zinc-100"
+              fill="#09090b"
               fontSize="7.5"
-              fontFamily="monospace"
+              fontFamily="JetBrains Mono, monospace"
               fontWeight="bold"
             >
               DEST

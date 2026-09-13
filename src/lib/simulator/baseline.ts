@@ -26,7 +26,7 @@ export class BaselineAgent {
 
     return {
       agent_id: 'baseline',
-      label: 'Traditional App Baseline 📱',
+      label: 'Traditional App Baseline',
       accepted,
       skipped,
       earnings_total: Math.round(this.totalEarnings * 100) / 100,

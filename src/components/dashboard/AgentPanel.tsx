@@ -22,60 +22,63 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
   const getStatusBadge = () => {
     if ((courier.dispatchCooldownTicks || 0) > 0) {
       return (
-        <span className="text-[10px] px-2 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/40 flex items-center gap-1 font-mono font-bold animate-pulse">
-          <span>⏳</span> Cooldown App ({courier.dispatchCooldownTicks}m)
+        <span className="text-xs px-2.5 py-1 rounded-[4px] font-mono text-[#a1a1aa] border border-[#27272a] bg-transparent flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
+          Cooldown ({courier.dispatchCooldownTicks}m)
         </span>
       );
     }
     switch (courier.status) {
       case 'moving_to_pickup':
         return (
-          <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-            Pickup ➔ {courier.currentTask?.targetName || 'Restaurant'}
+          <span className="text-xs px-2.5 py-1 rounded-[4px] font-mono text-[#a1a1aa] border border-[#27272a] bg-transparent flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            Pickup: {courier.currentTask?.targetName || 'Restaurant'}
           </span>
         );
       case 'waiting_at_pickup':
         return (
-          <span className="text-[10px] px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30 flex items-center gap-1 font-mono">
-            <span>🍳</span> Kitchen Waiting
+          <span className="text-xs px-2.5 py-1 rounded-[4px] font-mono text-[#a1a1aa] border border-[#27272a] bg-transparent flex items-center gap-1.5">
+            En Cocina
           </span>
         );
       case 'delivering':
         return (
-          <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-            Delivering ➔ {courier.currentTask?.targetName || 'Customer'}
+          <span className="text-xs px-2.5 py-1 rounded-[4px] font-mono text-[#a1a1aa] border border-[#27272a] bg-transparent flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Entregando
           </span>
         );
       case 'trapped_in_closure':
         return (
-          <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1 font-mono font-bold animate-pulse">
-            <span>🚧</span> Atrapado en Cierre (4 km/h)
+          <span className="text-xs px-2.5 py-1 rounded-[4px] font-mono text-rose-400 border border-rose-900/50 bg-transparent flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            Atrapado en Cierre
           </span>
         );
       default:
         return (
-          <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">
-            ⚪ Idle (Available)
+          <span className="text-xs px-2.5 py-1 rounded-[4px] font-mono text-[#71717a] border border-[#27272a] bg-transparent">
+            Disponible (Idle)
           </span>
         );
     }
   };
 
   const net = courier.netEarnings ?? courier.currentEarnings;
+  const profitPerKm = courier.totalKm > 0
+    ? (net / courier.totalKm).toFixed(2)
+    : '0.00';
 
   return (
-    <div
-      className={`bg-[#111827]/80 backdrop-blur border ${borderColor} rounded-xl p-5 flex flex-col justify-between shadow-xl`}
-    >
+    <div className="bg-[#121215] border border-[#27272a] rounded-md p-5 flex flex-col justify-between hover:border-[#3f3f46] transition-colors">
       <div>
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h3 className="text-base font-bold text-white tracking-wide">{title}</h3>
-            <p className="text-xs text-slate-400">{subtitle}</p>
+            <h3 className="text-sm font-bold text-[#fafafa] tracking-tight">{title}</h3>
+            <p className="text-xs font-mono text-[#71717a] mt-0.5">{subtitle}</p>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold uppercase tracking-wider bg-white/10 text-slate-200">
+          <span className="text-[10px] px-2 py-0.5 rounded-[4px] font-mono uppercase tracking-wider text-[#71717a] border border-[#27272a] bg-transparent">
             {tag}
           </span>
         </div>
@@ -83,68 +86,70 @@ export const AgentPanel: React.FC<AgentPanelProps> = ({
         <div className="flex justify-between items-center my-3">
           <div>
             <EarningsCounter amount={courier.currentEarnings} />
-            <span className="text-[11px] font-mono text-slate-400 block mt-0.5">
-              Neto:{' '}
-              <strong className={net < 0 ? 'text-rose-400' : 'text-emerald-400'}>
-                ${net.toFixed(1)} MXN
-              </strong>
-            </span>
+            {courier.netEarnings !== undefined && (
+              <span className="text-[11px] font-mono text-[#71717a] block mt-0.5">
+                Neto: <strong className="text-[#fafafa] font-semibold">${net.toFixed(1)}</strong>
+              </span>
+            )}
           </div>
           {getStatusBadge()}
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t border-slate-800 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-[#27272a] text-xs">
           <div>
-            <span className="text-slate-400 block">Distance Traveled</span>
-            <span className="text-slate-200 font-mono font-bold text-sm">
-              {courier.totalKm.toFixed(1)} km
-            </span>
+            <span className="text-[#71717a] block text-xs mb-0.5">Distancia</span>
+            <div className="font-mono text-xs sm:text-sm">
+              <span className="text-[#fafafa] font-semibold">{courier.totalKm.toFixed(1)}</span>
+              <span className="text-[#71717a] text-xs ml-1">km</span>
+            </div>
           </div>
           <div>
-            <span className="text-slate-400 block">Orders Completed</span>
-            <span className="text-slate-200 font-mono font-bold text-sm">
-              {courier.completedOrders} orders
-            </span>
+            <span className="text-[#71717a] block text-xs mb-0.5">Entregas</span>
+            <div className="font-mono text-xs sm:text-sm">
+              <span className="text-[#fafafa] font-semibold">{courier.completedOrders}</span>
+              <span className="text-[#71717a] text-xs ml-1">pedidos</span>
+            </div>
           </div>
           <div>
-            <span className="text-slate-400 block">Carrying in Bag</span>
-            <span className="text-slate-200 font-mono font-bold text-sm">
-              {courier.carryingOrders?.length || 0} active
-            </span>
+            <span className="text-[#71717a] block text-xs mb-0.5">En Mochila</span>
+            <div className="font-mono text-xs sm:text-sm">
+              <span className="text-[#fafafa] font-semibold">{courier.carryingOrders?.length || 0}</span>
+              <span className="text-[#71717a] text-xs ml-1">ítems</span>
+            </div>
           </div>
           <div>
-            <span className="text-slate-400 block">Incidentes / Multas</span>
-            <span
-              className={`font-mono font-bold text-sm ${
-                courier.incidentsCount ? 'text-rose-400' : 'text-emerald-400'
-              }`}
-            >
-              {courier.incidentsCount
-                ? `⚠️ ${courier.incidentsCount} (-$${courier.penaltiesMXN || 0})`
-                : '🛡️ 0 (Seguro)'}
-            </span>
+            <span className="text-[#71717a] block text-xs mb-0.5">Incidentes</span>
+            <div className="font-mono text-xs sm:text-sm">
+              {courier.incidentsCount ? (
+                <span className="text-rose-400 font-semibold">
+                  ⚠️ {courier.incidentsCount} (-${courier.penaltiesMXN || 0})
+                </span>
+              ) : (
+                <span className="text-emerald-400 font-semibold">0 (Seguro)</span>
+              )}
+            </div>
           </div>
           <div>
-            <span className="text-slate-400 block">Rechazos / Cooldown</span>
-            <span
-              className={`font-mono font-bold text-sm ${
-                (courier.dispatchCooldownTicks || 0) > 0
-                  ? 'text-purple-400 animate-pulse'
-                  : (courier.consecutiveSkips || 0) >= 3
-                  ? 'text-amber-400'
-                  : 'text-slate-300'
-              }`}
-            >
-              {(courier.dispatchCooldownTicks || 0) > 0
-                ? `⏳ ${courier.dispatchCooldownTicks}m cooldown`
-                : `${courier.consecutiveSkips || 0}/4 seguidos (${courier.skippedOrders} tot)`}
-            </span>
+            <span className="text-[#71717a] block text-xs mb-0.5">Rechazos</span>
+            <div className="font-mono text-xs sm:text-sm">
+              {(courier.dispatchCooldownTicks || 0) > 0 ? (
+                <span className="text-purple-400 font-semibold animate-pulse">
+                  ⏳ {courier.dispatchCooldownTicks}m cool
+                </span>
+              ) : (
+                <span className="text-[#fafafa] font-semibold">
+                  {courier.consecutiveSkips || 0}/4 <span className="text-[#71717a] text-xs">({courier.skippedOrders || 0} tot)</span>
+                </span>
+              )}
+            </div>
           </div>
           <div>
-            <span className="text-slate-400 block">Eficiencia $/km</span>
-            <span className="text-slate-200 font-mono font-bold text-sm">
-              ${courier.totalKm > 0 ? (net / courier.totalKm).toFixed(1) : '0.0'}/km
-            </span>
+            <span className="text-[#71717a] block text-xs mb-0.5">Rentabilidad</span>
+            <div className="font-mono text-xs sm:text-sm">
+              <span className="text-[#71717a] text-xs">$</span>
+              <span className="text-[#fafafa] font-semibold">{profitPerKm}</span>
+              <span className="text-[#71717a] text-xs ml-1">/km</span>
+            </div>
           </div>
         </div>
       </div>

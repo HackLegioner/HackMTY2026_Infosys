@@ -10,42 +10,46 @@ interface EventBannerProps {
 
 export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent }) => {
   return (
-    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 my-4">
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center space-x-2">
-          <span className="text-amber-400">⚡</span>
-          <h4 className="text-sm font-bold text-white uppercase tracking-wider">
-            Disaster & Surge Scenarios
-          </h4>
+    <div className="bg-[#121215] border border-[#27272a] rounded-md p-5 space-y-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center space-x-2">
+            <h4 className="text-sm font-bold text-[#fafafa] tracking-tight">
+              Simulación de Contingencias & Eventos Críticos
+            </h4>
+          </div>
+          <p className="text-xs text-[#71717a] mt-0.5">
+            Inyecta perturbaciones viales y climáticas en Monterrey para evaluar resiliencia algorítmica.
+          </p>
         </div>
 
         {onTriggerEvent && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => onTriggerEvent(0)}
-              className="px-2.5 py-1 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded transition flex items-center gap-1 font-medium"
               title="Disparar tarifa dinámica 2.5x en San Pedro"
+              className="px-3 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1 cursor-pointer"
             >
               <span>⚡</span> + Surge 2.5x
             </button>
             <button
               onClick={() => onTriggerEvent(1)}
-              className="px-2.5 py-1 text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 rounded transition flex items-center gap-1 font-medium"
-              title="Bloqueo total en Av. Constitución (4 km/h)"
+              title="Bloqueo total en Av. Gonzalitos / Constitución (Velocidad cae a 4 km/h)"
+              className="px-3 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1 cursor-pointer"
             >
               <span>🚧</span> + Cierre Vial
             </button>
             <button
               onClick={() => onTriggerEvent(2)}
-              className="px-2.5 py-1 text-xs bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded transition flex items-center gap-1 font-medium"
-              title="Tormenta con -40% velocidad y asfalto resbaloso"
+              title="Tormenta tropical: -40% velocidad en ruta y asfalto resbaloso"
+              className="px-3 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1 cursor-pointer"
             >
-              <span>⛈️</span> + Tormenta Lluvia
+              <span>⛈️</span> + Tormenta
             </button>
             <button
               onClick={() => onTriggerEvent(3)}
-              className="px-2.5 py-1 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/40 rounded transition flex items-center gap-1 font-medium"
-              title="Zona peligrosa (-$45 MXN penalización si entras)"
+              title="Zona peligrosa: -$45 MXN penalización si el repartidor ingresa"
+              className="px-3 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1 cursor-pointer"
             >
               <span>⚠️</span> + Zona Riesgo
             </button>
@@ -54,40 +58,56 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
       </div>
 
       {events.length === 0 ? (
-        <p className="text-xs text-slate-500">Operaciones normales en Monterrey. Sin contingencias activas.</p>
+        <div className="py-1">
+          <p className="text-xs font-mono text-[#71717a]">
+            Tráfico y condiciones estables en el área metropolitana de Monterrey. Sin incidentes activos.
+          </p>
+        </div>
       ) : (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1">
           {events.map((ev) => {
-            const isClosure = ev.event_type === 'road_closure' || ev.type === 'road_closure';
-            const isUnsafe = ev.event_type === 'unsafe_zone' || ev.type === 'unsafe_zone';
-            const isRain = ev.event_type === 'rain' || ev.type === 'rain';
+            const evType = ev.type || ev.event_type || 'crisis';
+            const isClosure = evType === 'road_closure';
+            const isRisk = evType === 'unsafe_zone';
+            const isStorm = evType === 'rain' || evType === 'storm';
 
-            const badgeBorder = isClosure
-              ? 'border-rose-500/40 bg-rose-950/30 text-rose-200'
-              : isUnsafe
-              ? 'border-purple-500/40 bg-purple-950/30 text-purple-200'
-              : isRain
-              ? 'border-sky-500/40 bg-sky-950/30 text-sky-200'
-              : 'border-amber-500/40 bg-amber-950/30 text-amber-200';
-
-            const dotBg = isClosure
-              ? 'bg-rose-400'
-              : isUnsafe
+            const dotColor = isClosure
+              ? 'bg-rose-500'
+              : isRisk
               ? 'bg-purple-400'
-              : isRain
+              : isStorm
               ? 'bg-sky-400'
               : 'bg-amber-400';
+
+            const borderColor = isClosure
+              ? 'border-rose-900/50 bg-rose-950/20'
+              : isRisk
+              ? 'border-purple-900/50 bg-purple-950/20'
+              : isStorm
+              ? 'border-sky-900/50 bg-sky-950/20'
+              : 'border-amber-900/50 bg-amber-950/20';
+
+            const impactLabel = isClosure
+              ? 'Tráfico 4 km/h'
+              : isRisk
+              ? 'Penalización -$45'
+              : isStorm
+              ? '-40% Velocidad'
+              : 'Surge 2.5x';
 
             return (
               <div
                 key={ev.id || ev.event_id}
-                className={`px-3 py-1.5 rounded border text-xs flex items-center space-x-2 ${badgeBorder}`}
+                className={`px-3 py-1.5 rounded-md border text-xs flex items-center space-x-2 font-mono ${borderColor}`}
               >
-                <span className={`w-2 h-2 rounded-full animate-ping ${dotBg}`} />
-                <span className="font-bold uppercase text-[11px]">
-                  {ev.type || ev.event_type}:
+                <span className={`w-1.5 h-1.5 rounded-full ${dotColor} animate-pulse`} />
+                <span className="font-bold text-[#fafafa]">
+                  {evType.toUpperCase()}:
                 </span>
-                <span className="text-slate-300">{ev.description || 'Active scenario'}</span>
+                <span className="text-[#a1a1aa]">{ev.description || 'Incidente en curso'}</span>
+                <span className="text-[10px] text-[#71717a] font-semibold border-l border-[#27272a] pl-2">
+                  {impactLabel}
+                </span>
               </div>
             );
           })}

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import 'leaflet/dist/leaflet.css';
+import { ThemeProvider } from '@/context/ThemeContext';
 
 export const metadata: Metadata = {
   title: 'The Courier — AI Optimization Engine',
@@ -13,9 +14,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="antialiased bg-[#0A0E1A] text-slate-100 min-h-screen">
-        {children}
+    <html lang="es" className="dark">
+      <body className="antialiased bg-[#09090b] text-[#fafafa] min-h-screen font-sans">
+        <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>
   );

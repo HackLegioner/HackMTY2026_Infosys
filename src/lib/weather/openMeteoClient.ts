@@ -44,26 +44,26 @@ export async function fetchMonterreyWeather(): Promise<WeatherReport> {
     let condition: WeatherReport['condition'] = 'clear';
     let surgeMultiplier = 1.0;
     let speedMultiplier = 1.0;
-    let description = `☀️ Monterrey despejado (${temp}°C)`;
+    let description = `Monterrey despejado (${temp}°C)`;
 
     if (code >= 95 && code <= 99) {
       condition = 'storm';
       surgeMultiplier = 1.8;
       speedMultiplier = 0.55; // 25 -> 13.7 km/h
-      description = `⛈️ Tormenta eléctrica en Monterrey (${temp}°C) — Surge 1.8x activado`;
+      description = `Tormenta eléctrica en Monterrey (${temp}°C) — Surge 1.8x activado`;
     } else if (isRain) {
       condition = 'rain';
       surgeMultiplier = 1.5;
       speedMultiplier = 0.64; // 25 -> 16 km/h
-      description = `🌧️ Lluvia en Monterrey (${temp}°C, ${rain + showers}mm) — Surge 1.5x activado`;
+      description = `Lluvia en Monterrey (${temp}°C, ${rain + showers}mm) — Surge 1.5x activado`;
     } else if (isExtremeHeat) {
       condition = 'extreme_heat';
       surgeMultiplier = 1.35;
       speedMultiplier = 0.9;
-      description = `🔥 Canícula / Calor extremo en Monterrey (${temp}°C > 36°C) — Surge 1.35x activado`;
+      description = `Canícula / Calor extremo en Monterrey (${temp}°C > 36°C) — Surge 1.35x activado`;
     } else if (code >= 1 && code <= 3) {
       condition = 'cloudy';
-      description = `⛅ Nubosidad parcial en Monterrey (${temp}°C)`;
+      description = `Nubosidad parcial en Monterrey (${temp}°C)`;
     }
 
     return {
@@ -94,7 +94,7 @@ export async function fetchMonterreyWeather(): Promise<WeatherReport> {
       isExtremeHeat: false,
       suggestedSurgeMultiplier: 1.0,
       speedMultiplier: 1.0,
-      description: '☀️ Monterrey clima despejado (28.5°C)',
+      description: 'Monterrey clima despejado (28.5°C)',
       fetchedAt: new Date().toISOString(),
     };
   }

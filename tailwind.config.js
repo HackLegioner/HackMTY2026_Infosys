@@ -7,9 +7,16 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
       colors: {
-        background: '#0A0E1A',
-        card: '#111827',
+        background: '#09090b',
+        card: '#121215',
+        cardSecondary: '#18181b',
+        borderSubtle: '#27272a',
+        borderHighlight: '#3f3f46',
         agentA: '#3B82F6',
         agentB: '#10B981',
         baseline: '#6B7280',

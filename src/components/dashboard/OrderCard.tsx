@@ -15,32 +15,36 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order, decision = 'pending
   const zone = order.pickup?.zone || 'MTY';
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-lg p-3 flex justify-between items-center text-xs">
+    <div className="bg-[#121215] border border-[#27272a] rounded-md p-3.5 flex justify-between items-center text-xs hover:border-[#3f3f46] transition">
       <div>
         <div className="flex items-center space-x-2">
-          <span className="font-mono text-slate-300 font-semibold">{orderId}</span>
-          <span className="text-emerald-400 font-bold">${pay} MXN</span>
-          <span className="text-slate-400 text-[10px] font-mono">({zone})</span>
+          <span className="font-mono text-[#fafafa] font-semibold">{orderId}</span>
+          <span className="font-mono">
+            <span className="text-[#71717a]">$</span>
+            <span className="text-[#fafafa] font-semibold">{pay}</span>
+            <span className="text-[#71717a] text-[10px] ml-1">MXN</span>
+          </span>
+          <span className="text-[#71717a] text-[10px] font-mono">({zone})</span>
         </div>
-        <p className="text-slate-400 mt-0.5">
-          {dist.toFixed(1)} km · Expiry {order.expires_in_seconds || 120}s
+        <p className="text-[#71717a] mt-0.5 text-[11px] font-mono">
+          {dist.toFixed(1)} km · Expira en {order.expires_in_seconds || 120}s
         </p>
       </div>
 
       <div>
         {decision === 'accept' && (
-          <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold uppercase text-[10px]">
-            Accepted
+          <span className="px-2 py-0.5 rounded-[4px] bg-[#18181b] text-[#a1a1aa] border border-[#27272a] font-mono text-[10px] uppercase">
+            Aceptado
           </span>
         )}
         {decision === 'skip' && (
-          <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold uppercase text-[10px]">
-            Skipped
+          <span className="px-2 py-0.5 rounded-[4px] bg-[#18181b] text-[#71717a] border border-[#27272a] font-mono text-[10px] uppercase">
+            Omitido
           </span>
         )}
         {decision === 'pending' && (
-          <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-400 uppercase text-[10px]">
-            Pending
+          <span className="px-2 py-0.5 rounded-[4px] bg-[#18181b] text-[#71717a] border border-[#27272a] font-mono text-[10px] uppercase">
+            Pendiente
           </span>
         )}
       </div>

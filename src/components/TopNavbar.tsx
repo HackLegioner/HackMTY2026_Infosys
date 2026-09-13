@@ -1,67 +1,200 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+
+import Link from 'next/link';
+import { useTheme } from '@/context/ThemeContext';
 
 interface TopNavbarProps {
   showBrand?: boolean;
+  brandTitle?: string;
+  activeTab?: 'home' | 'driver' | 'audit';
+  userName?: string;
+  userRoleLabel?: string;
+  onSettingsClick?: () => void;
+  onThemeToggle?: () => void;
+  onLogout?: () => void;
+  children?: React.ReactNode;
 }
 
-export const TopNavbar: React.FC<TopNavbarProps> = ({ showBrand = false }) => {
-  return (
-    <header className={`w-full h-[72px] bg-white dark:bg-zinc-900 border-b border-[#E4E4E7] dark:border-zinc-800 px-6 sm:px-10 flex items-center ${showBrand ? 'justify-between' : 'justify-end'} transition-colors`}>
-      {/* Brand (Optional) */}
-      {showBrand && (
-        <div className="flex items-center gap-3">
-          <div className="w-3 h-3 rounded-sm bg-[#09090B] dark:bg-zinc-100" />
-          <span className="font-bold text-sm tracking-tight text-[#09090B] dark:text-zinc-100">
-            HackLegioner
-          </span>
-        </div>
-      )}
+export const TopNavbar: React.FC<TopNavbarProps> = ({
+  showBrand = false,
+  brandTitle = 'HackLegioner',
+  activeTab,
+  userName = 'Admin',
+  userRoleLabel = 'Usuario actual',
+  onSettingsClick,
+  onThemeToggle,
+  onLogout,
+  children,
+}) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const { theme, toggleTheme } = useTheme();
 
-      {/* User Icon (Anchored to right - justify-end) */}
-      <div className="flex items-center justify-end">
-        <button
-          aria-label="Perfil de usuario"
-          className="rounded-full hover:opacity-85 transition-opacity focus:outline-none focus:ring-2 focus:ring-zinc-400"
-        >
-          <svg
-            width="40"
-            height="40"
-            viewBox="1600 16 40 40"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-10 h-10"
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMenuOpen]);
+
+  const handleSettings = () => {
+    if (onSettingsClick) {
+      onSettingsClick();
+    }
+    setIsMenuOpen(false);
+  };
+
+  const handleTheme = () => {
+    if (onThemeToggle) {
+      onThemeToggle();
+    } else {
+      toggleTheme();
+    }
+    setIsMenuOpen(false);
+  };
+
+  const handleLogoutAction = () => {
+    if (onLogout) {
+      onLogout();
+    }
+    setIsMenuOpen(false);
+  };
+
+  return (
+    <header className="relative z-50 w-full h-14 bg-[#09090b] border-b border-[#27272a] px-6 sm:px-10 flex items-center justify-between">
+      {/* Brand (Optional) */}
+      <div className="flex items-center gap-6">
+        {showBrand && (
+          <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition">
+            <div className="w-3.5 h-3.5 rounded-[2px] bg-[#fafafa]" />
+            <span className="font-semibold text-sm tracking-tight text-[#fafafa]">
+              {brandTitle}
+            </span>
+          </Link>
+        )}
+
+        {/* Global Nav Links */}
+        <nav className="hidden md:flex items-center gap-1.5">
+          <Link
+            href="/"
+            className={`text-xs font-medium px-3 py-1.5 rounded-md transition ${
+              activeTab === 'home'
+                ? 'bg-[#18181b] text-[#fafafa] border border-[#27272a]'
+                : 'text-[#71717a] hover:text-[#fafafa] hover:bg-[#18181b]/50'
+            }`}
           >
-            <rect
-              x="1600.5"
-              y="16.5"
-              width="39"
-              height="39"
-              rx="19.5"
-              fill="#F4F4F5"
-              className="fill-zinc-100 dark:fill-zinc-800"
-            />
-            <rect
-              x="1600.5"
-              y="16.5"
-              width="39"
-              height="39"
-              rx="19.5"
-              stroke="#E4E4E7"
-              className="stroke-zinc-200 dark:stroke-zinc-700"
-            />
-            <g clipPath="url(#clip0_user_nav)">
-              <path
-                d="M1615.83 43.2189V41.8338C1615.83 41.3917 1616.01 40.9678 1616.32 40.6552C1616.63 40.3426 1617.06 40.167 1617.5 40.167H1622.5C1622.94 40.167 1623.37 40.3426 1623.68 40.6552C1623.99 40.9678 1624.17 41.3917 1624.17 41.8338V43.2189M1628.33 36C1628.33 40.6027 1624.6 44.334 1620 44.334C1615.4 44.334 1611.67 40.6027 1611.67 36C1611.67 31.3973 1615.4 27.666 1620 27.666C1624.6 27.666 1628.33 31.3973 1628.33 36ZM1622.5 34.3332C1622.5 35.714 1621.38 36.8334 1620 36.8334C1618.62 36.8334 1617.5 35.714 1617.5 34.3332C1617.5 32.9524 1618.62 31.833 1620 31.833C1621.38 31.833 1622.5 32.9524 1622.5 34.3332Z"
-                stroke="#09090B"
-                strokeWidth="2"
-                strokeLinecap="round"
-                className="stroke-zinc-900 dark:stroke-zinc-100"
-              />
-            </g>
-          </svg>
-        </button>
+            Simulación v2
+          </Link>
+          <Link
+            href="/driver"
+            className={`text-xs font-medium px-3 py-1.5 rounded-md transition ${
+              activeTab === 'driver'
+                ? 'bg-[#18181b] text-[#fafafa] border border-[#27272a]'
+                : 'text-[#71717a] hover:text-[#fafafa] hover:bg-[#18181b]/50'
+            }`}
+          >
+            Repartidores
+          </Link>
+          <Link
+            href="/audit"
+            className={`text-xs font-medium px-3 py-1.5 rounded-md transition ${
+              activeTab === 'audit'
+                ? 'bg-[#18181b] text-[#fafafa] border border-[#27272a]'
+                : 'text-[#71717a] hover:text-[#fafafa] hover:bg-[#18181b]/50'
+            }`}
+          >
+            Auditoría
+          </Link>
+        </nav>
+      </div>
+
+      {/* Right Content & User Icon */}
+      <div className="flex items-center gap-4">
+        {children}
+
+        {/* User profile dropdown container */}
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            onClick={() => setIsMenuOpen((prev) => !prev)}
+            aria-expanded={isMenuOpen}
+            aria-haspopup="true"
+            aria-label="Perfil de usuario"
+            className="w-8 h-8 rounded-full bg-[#18181b] border border-[#27272a] text-[#fafafa] text-xs font-mono font-medium flex items-center justify-center hover:border-[#3f3f46] transition-all focus:outline-none focus:ring-1 focus:ring-[#3f3f46]"
+          >
+            AH
+          </button>
+
+          {/* User Popover Menu */}
+          {isMenuOpen && (
+            <div
+              className="absolute right-0 top-[calc(100%+8px)] w-[260px] bg-[#121215] border border-[#27272a] rounded-md p-5 shadow-2xl z-[1000] select-none animate-in fade-in zoom-in-95 duration-150"
+              role="menu"
+              aria-orientation="vertical"
+              aria-label="Menú de usuario"
+            >
+              {/* Header info: Usuario actual + Admin */}
+              <div className="flex flex-col items-end mb-5">
+                <span className="text-xs text-[#71717a] font-medium">
+                  {userRoleLabel}
+                </span>
+                <span className="text-xl font-bold font-mono text-[#fafafa] tracking-tight mt-0.5 leading-tight">
+                  {userName}
+                </span>
+              </div>
+
+              {/* Menu action buttons */}
+              <div className="flex flex-col gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleSettings}
+                  className="w-full py-2.5 px-4 bg-[#18181b] hover:bg-[#27272a] active:scale-[0.99] border border-[#27272a] rounded-md text-[#fafafa] font-semibold text-xs text-center transition-all focus:outline-none focus:ring-1 focus:ring-[#3f3f46]"
+                >
+                  Configuración
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTheme}
+                  className="w-full py-2.5 px-4 bg-[#18181b] hover:bg-[#27272a] active:scale-[0.99] border border-[#27272a] rounded-md text-[#fafafa] font-semibold text-xs text-center transition-all focus:outline-none focus:ring-1 focus:ring-[#3f3f46] flex items-center justify-between"
+                >
+                  <span>Tema</span>
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-[#a1a1aa] px-1.5 py-0.5 rounded bg-[#121215] border border-[#27272a]">
+                    {theme === 'dark' ? 'Oscuro' : 'Claro'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleLogoutAction}
+                  className="w-full py-2.5 px-4 bg-[#ffffff] hover:bg-[#e4e4e7] active:scale-[0.99] rounded-md text-[#09090b] font-bold text-xs text-center transition-all focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

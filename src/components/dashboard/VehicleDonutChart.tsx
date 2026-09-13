@@ -11,8 +11,8 @@ export const VehicleDonutChart: React.FC = () => {
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
   return (
-    <div className="w-full bg-white dark:bg-zinc-900 rounded-xl border border-[#E4E4E7] dark:border-zinc-800 p-5 flex flex-col justify-between shadow-sm">
-      <h4 className="text-xs font-bold text-[#09090B] dark:text-zinc-100 tracking-tight mb-2">
+    <div className="w-full bg-[#121215] rounded-md border border-[#27272a] p-5 flex flex-col justify-between">
+      <h4 className="text-xs font-bold text-[#fafafa] tracking-tight mb-2">
         División de Vehículos
       </h4>
 
@@ -24,8 +24,7 @@ export const VehicleDonutChart: React.FC = () => {
             cx="65"
             cy="65"
             r={radius}
-            stroke="#E4E4E7"
-            className="stroke-zinc-200 dark:stroke-zinc-800"
+            stroke="#27272a"
             strokeWidth={strokeWidth}
             fill="transparent"
           />
@@ -34,8 +33,7 @@ export const VehicleDonutChart: React.FC = () => {
             cx="65"
             cy="65"
             r={radius}
-            stroke="#09090B"
-            className="stroke-zinc-900 dark:stroke-zinc-100"
+            stroke="#fafafa"
             strokeWidth={strokeWidth}
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
@@ -46,24 +44,24 @@ export const VehicleDonutChart: React.FC = () => {
 
         {/* Center label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-lg font-black font-mono tracking-tight text-[#09090B] dark:text-zinc-100">
+          <span className="text-lg font-bold font-mono tracking-tight text-[#fafafa]">
             72%
           </span>
-          <span className="text-[9px] text-[#71717A] dark:text-zinc-400 font-medium -mt-0.5">
+          <span className="text-[9px] text-[#71717a] font-medium -mt-0.5">
             Motorizado
           </span>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-1 text-[11px] text-[#71717A] dark:text-zinc-400">
+      <div className="flex items-center justify-center gap-6 mt-1 text-[11px] text-[#71717a]">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-[#09090B] dark:bg-zinc-100 inline-block" />
-          <span className="font-medium text-xs text-[#09090B] dark:text-zinc-300">Motos (36)</span>
+          <span className="w-2.5 h-2.5 rounded-[2px] bg-[#fafafa] inline-block" />
+          <span className="font-medium text-xs text-[#fafafa]">Motos (36)</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-[#E4E4E7] dark:bg-zinc-700 inline-block" />
-          <span className="font-medium text-xs text-[#71717A] dark:text-zinc-400">Bicis (12)</span>
+          <span className="w-2.5 h-2.5 rounded-[2px] bg-[#27272a] inline-block" />
+          <span className="font-medium text-xs text-[#71717a]">Bicis (12)</span>
         </div>
       </div>
     </div>

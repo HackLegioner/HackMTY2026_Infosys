@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -18,13 +20,23 @@ function MapController() {
   return null;
 }
 
-const isValidCoord = (lat: any, lng: any) =>
-  typeof lat === 'number' && !isNaN(lat) && typeof lng === 'number' && !isNaN(lng) && lat !== 0 && lng !== 0;
+function isValidCoord(lat: any, lng: any): boolean {
+  return (
+    typeof lat === 'number' &&
+    typeof lng === 'number' &&
+    !isNaN(lat) &&
+    !isNaN(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180 &&
+    !(lat === 0 && lng === 0)
+  );
+}
 
 interface LeafletMapInnerProps {
   shiftState: ShiftState | null;
 }
-
 
 export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) => {
   const center: [number, number] = [25.6692, -100.3099]; // Monterrey Centro
@@ -35,8 +47,8 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
         className: 'agent-a-pin',
         html: `
           <div style="transform: translate(-50%, -50%);" class="flex flex-col items-center">
-            <div class="px-2 py-0.5 rounded-full bg-blue-600 border border-blue-400 text-white text-[10px] font-bold shadow-lg flex items-center gap-1">
-              <span>🧊</span> A
+            <div class="px-2 py-0.5 rounded-full bg-blue-600 border border-blue-400 text-white text-[10px] font-bold shadow-lg flex items-center">
+              A
             </div>
             <div class="w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-[0_0_12px_#3B82F6] animate-ping mt-0.5"></div>
           </div>`,
@@ -52,8 +64,8 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
         className: 'agent-b-pin',
         html: `
           <div style="transform: translate(-50%, -50%);" class="flex flex-col items-center">
-            <div class="px-2 py-0.5 rounded-full bg-emerald-600 border border-emerald-400 text-white text-[10px] font-bold shadow-lg flex items-center gap-1">
-              <span>⚡</span> B
+            <div class="px-2 py-0.5 rounded-full bg-emerald-600 border border-emerald-400 text-white text-[10px] font-bold shadow-lg flex items-center">
+              B
             </div>
             <div class="w-3 h-3 rounded-full bg-emerald-500 border-2 border-white shadow-[0_0_12px_#10B981] animate-ping mt-0.5"></div>
           </div>`,
@@ -69,8 +81,8 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
         className: 'baseline-pin',
         html: `
           <div style="transform: translate(-50%, -50%);" class="flex flex-col items-center">
-            <div class="px-2 py-0.5 rounded-full bg-slate-600 border border-slate-400 text-slate-200 text-[10px] font-bold shadow-lg flex items-center gap-1">
-              <span>📱</span> Base
+            <div class="px-2 py-0.5 rounded-full bg-slate-600 border border-slate-400 text-slate-200 text-[10px] font-bold shadow-lg flex items-center">
+              Base
             </div>
             <div class="w-3 h-3 rounded-full bg-slate-400 border-2 border-white shadow-[0_0_8px_#6B7280] mt-0.5"></div>
           </div>`,
@@ -80,35 +92,13 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     []
   );
 
-  const iconPickupHub = useMemo(
+  const iconZone = useMemo(
     () =>
       L.divIcon({
-        className: 'zone-hub-pickup',
-        html: `<div class="w-3 h-3 rounded-full bg-amber-400 border-2 border-slate-900 shadow-[0_0_8px_rgba(245,158,11,0.7)] cursor-pointer" title="Punto de Recolección"></div>`,
-        iconSize: [12, 12],
-        iconAnchor: [6, 6],
-      }),
-    []
-  );
-
-  const iconDropoffHub = useMemo(
-    () =>
-      L.divIcon({
-        className: 'zone-hub-dropoff',
-        html: `<div class="w-2.5 h-2.5 rounded-full bg-sky-400 border-2 border-slate-900 shadow-[0_0_6px_rgba(56,189,248,0.7)] cursor-pointer" title="Zona de Entrega"></div>`,
+        className: 'zone-dot',
+        html: `<div class="w-2.5 h-2.5 rounded-full bg-slate-400/80 border border-slate-200/50"></div>`,
         iconSize: [10, 10],
         iconAnchor: [5, 5],
-      }),
-    []
-  );
-
-  const iconBothHub = useMemo(
-    () =>
-      L.divIcon({
-        className: 'zone-hub-both',
-        html: `<div class="w-3 h-3 rounded-full bg-indigo-400 border-2 border-slate-900 shadow-[0_0_8px_rgba(129,140,248,0.7)] cursor-pointer" title="Hub Mixto"></div>`,
-        iconSize: [12, 12],
-        iconAnchor: [6, 6],
       }),
     []
   );
@@ -117,9 +107,9 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     () =>
       L.divIcon({
         className: 'pickup-pin',
-        html: `<div class="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-md border border-amber-300 flex items-center">🍴</div>`,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
+        html: `<div class="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold shadow-md border border-amber-300 flex items-center justify-center">P</div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
       }),
     []
   );
@@ -128,77 +118,24 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     () =>
       L.divIcon({
         className: 'dropoff-pin',
-        html: `<div class="px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-md border border-rose-300 flex items-center">🏠</div>`,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11],
+        html: `<div class="w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold shadow-md border border-rose-300 flex items-center justify-center">D</div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
       }),
     []
   );
 
-  const courierA = shiftState?.agents.agent_a || {
-    agentId: 'agent_a' as const,
-    lat: 25.6692,
-    lng: -100.3099,
-    currentEarnings: 0,
-    totalKm: 0,
-    completedOrders: 0,
-    skippedOrders: 0,
-    activeRoute: [],
-    carryingOrders: [],
-    status: 'idle' as const,
-    speedKmh: 25.0,
-    corridorName: 'Monterrey Zona Metropolitana',
-    penaltiesMXN: 0,
-    fuelCostMXN: 0,
-    netEarnings: 0,
-    incidentsCount: 0,
-  };
-
-  const courierB = shiftState?.agents.agent_b || {
-    agentId: 'agent_b' as const,
-    lat: 25.6574,
-    lng: -100.3684,
-    currentEarnings: 0,
-    totalKm: 0,
-    completedOrders: 0,
-    skippedOrders: 0,
-    activeRoute: [],
-    carryingOrders: [],
-    status: 'idle' as const,
-    speedKmh: 25.0,
-    corridorName: 'Monterrey Zona Metropolitana',
-    penaltiesMXN: 0,
-    fuelCostMXN: 0,
-    netEarnings: 0,
-    incidentsCount: 0,
-  };
-
-  const courierBase = shiftState?.agents.baseline || {
-    agentId: 'baseline' as const,
-    lat: 25.6514,
-    lng: -100.2895,
-    currentEarnings: 0,
-    totalKm: 0,
-    completedOrders: 0,
-    skippedOrders: 0,
-    activeRoute: [],
-    carryingOrders: [],
-    status: 'idle' as const,
-    speedKmh: 25.0,
-    corridorName: 'Monterrey Zona Metropolitana',
-    penaltiesMXN: 0,
-    fuelCostMXN: 0,
-    netEarnings: 0,
-    incidentsCount: 0,
-  };
+  const courierA = shiftState?.agents.agent_a;
+  const courierB = shiftState?.agents.agent_b;
+  const courierBase = shiftState?.agents.baseline;
 
   return (
     <MapContainer
       center={center}
-      zoom={11}
+      zoom={12}
       scrollWheelZoom={true}
       className="w-full h-full rounded-xl"
-      style={{ width: '100%', height: '100%', minHeight: '520px', background: '#0A0E1A' }}
+      style={{ background: '#0A0E1A' }}
     >
       <MapController />
       {/* 100% Free OpenStreetMap tile server with dark mode CSS filter - No API key required */}
@@ -206,44 +143,21 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         className="dark-tiles"
-        maxZoom={19}
       />
 
-
-      {/* Static Monterrey Hotspot Hubs (Recolección y Entrega) */}
-      {MONTERREY_ZONES.map((z) => {
-        const icon =
-          z.type === 'pickup'
-            ? iconPickupHub
-            : z.type === 'dropoff'
-            ? iconDropoffHub
-            : iconBothHub;
-        const typeBadge =
-          z.type === 'pickup'
-            ? '🍴 Hub Recolección (Restaurantes)'
-            : z.type === 'dropoff'
-            ? '🏠 Destino Entrega (Residencial)'
-            : '⚡ Hub Mixto (Comercial / Residencial)';
-
-        return (
-          <Marker key={z.name} position={[z.lat, z.lon]} icon={icon}>
-            <Popup className="text-slate-900 text-xs">
-              <div className="font-bold text-slate-900 text-xs">{z.name}</div>
-              <div className="text-[10px] text-slate-500 font-semibold">{z.municipality}</div>
-              <div className="text-[11px] mt-1 text-indigo-700 font-medium">{typeBadge}</div>
-              {z.description && (
-                <div className="text-[10px] text-slate-600 mt-0.5">{z.description}</div>
-              )}
-              <div className="text-[10px] text-slate-500 mt-1">
-                Demanda estimada: <strong className="text-amber-600">{z.weight}x</strong>
-              </div>
-            </Popup>
-          </Marker>
-        );
-      })}
+      {/* Static Monterrey Hotspot Hubs */}
+      {MONTERREY_ZONES.map((z) => (
+        <Marker key={z.name} position={[z.lat, z.lon]} icon={iconZone}>
+          <Popup className="text-slate-900 text-xs">
+            <strong>{z.name}</strong>
+            <br />
+            Demand factor: {z.weight}x
+          </Popup>
+        </Marker>
+      ))}
 
       {/* Dynamic Crisis & Surge Events */}
-      {shiftState?.activeEvents.map((evt) => {
+      {(shiftState?.activeEvents || []).map((evt) => {
         if (!evt.lat || !evt.lon) return null;
         const radiusMeters = (evt.radius_km || 1.5) * 1000;
 
@@ -262,7 +176,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
               }}
             >
               <Popup className="text-slate-900 text-xs">
-                <strong className="text-amber-600">⚡ Surge Zone Active!</strong>
+                <strong className="text-amber-600">Surge Zone Active!</strong>
                 <br />
                 {evt.description}
                 <br />
@@ -281,17 +195,14 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
               pathOptions={{
                 color: '#EF4444',
                 fillColor: '#EF4444',
-                fillOpacity: 0.35,
+                fillOpacity: 0.3,
                 weight: 2,
-                dashArray: '5, 5',
               }}
             >
               <Popup className="text-slate-900 text-xs">
-                <strong className="text-red-600">🚧 Cierre Vial Total</strong>
+                <strong className="text-red-600">Road Closure</strong>
                 <br />
                 {evt.description}
-                <br />
-                <span className="text-rose-700 font-bold">Tráfico bloqueado: Velocidad cae a 4 km/h</span>
               </Popup>
             </Circle>
           );
@@ -312,7 +223,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
               }}
             >
               <Popup className="text-slate-900 text-xs">
-                <strong className="text-purple-700">⚠️ Zona de Riesgo Crítico</strong>
+                <strong className="text-purple-600">Zona de Riesgo Activa</strong>
                 <br />
                 {evt.description}
                 <br />
@@ -337,7 +248,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
               }}
             >
               <Popup className="text-slate-900 text-xs">
-                <strong className="text-sky-600">⛈️ Tormenta Activa</strong>
+                <strong className="text-sky-600">Tormenta Activa</strong>
                 <br />
                 {evt.description}
                 <br />
@@ -391,7 +302,7 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
             icon={isPickup ? iconPickup : iconDropoff}
           >
             <Popup className="text-slate-900 text-xs">
-              <strong>{isPickup ? '🍴 Pickup Point' : '🏠 Dropoff Point'}</strong>
+              <strong>{isPickup ? 'Pickup Point' : 'Dropoff Point'}</strong>
               <br />
               Zone: {c.currentTask.targetName}
               <br />
@@ -405,9 +316,9 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       {courierA && isValidCoord(courierA.lat, courierA.lng) && (
         <Marker position={[courierA.lat, courierA.lng]} icon={iconAgentA}>
           <Popup className="text-slate-900 text-xs">
-            <strong className="text-blue-600">Agent A — The Economist 🧊</strong>
+            <strong className="text-blue-600">Agent A — The Economist</strong>
             <br />
-            Status: <span className="font-semibold">{courierA.status === 'trapped_in_closure' ? '🚧 Atrapado en Cierre' : courierA.status}</span>
+            Status: <span className="font-semibold">{courierA.status === 'trapped_in_closure' ? 'Atrapado en Cierre' : courierA.status}</span>
             <br />
             Ganancia Bruta: ${courierA.currentEarnings} MXN
             <br />
@@ -422,9 +333,9 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       {courierB && isValidCoord(courierB.lat, courierB.lng) && (
         <Marker position={[courierB.lat, courierB.lng]} icon={iconAgentB}>
           <Popup className="text-slate-900 text-xs">
-            <strong className="text-emerald-600">Agent B — The Hustler ⚡</strong>
+            <strong className="text-emerald-600">Agent B — The Hustler</strong>
             <br />
-            Status: <span className="font-semibold">{courierB.status === 'trapped_in_closure' ? '🚧 Atrapado en Cierre' : courierB.status}</span>
+            Status: <span className="font-semibold">{courierB.status === 'trapped_in_closure' ? 'Atrapado en Cierre' : courierB.status}</span>
             <br />
             Ganancia Bruta: ${courierB.currentEarnings} MXN
             <br />
@@ -439,9 +350,9 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
       {courierBase && isValidCoord(courierBase.lat, courierBase.lng) && (
         <Marker position={[courierBase.lat, courierBase.lng]} icon={iconBaseline}>
           <Popup className="text-slate-900 text-xs">
-            <strong className="text-slate-700">Traditional App Baseline 📱</strong>
+            <strong className="text-slate-700">Traditional App Baseline</strong>
             <br />
-            Status: <span className={`font-semibold ${courierBase.status === 'trapped_in_closure' ? 'text-rose-600 font-bold' : ''}`}>{courierBase.status === 'trapped_in_closure' ? '🚧 Atrapado en Cierre Vial (4 km/h)' : courierBase.status}</span>
+            Status: <span className="font-semibold">{courierBase.status === 'trapped_in_closure' ? 'Atrapado en Cierre (4 km/h)' : courierBase.status}</span>
             <br />
             Ganancia Bruta: ${courierBase.currentEarnings} MXN
             {courierBase.penaltiesMXN ? (

@@ -6,8 +6,10 @@ interface ReasoningCardProps {
   record: {
     tick: number;
     agentId: string;
-    accepted: number;
-    skipped: number;
+    accepted?: number;
+    skipped?: number;
+    acceptedCount?: number;
+    skippedCount?: number;
     reasoning?: string;
     payload?: Record<string, unknown>;
   };
@@ -15,30 +17,74 @@ interface ReasoningCardProps {
 }
 
 export const ReasoningCard: React.FC<ReasoningCardProps> = ({ record, tier }) => {
+  const accepted = record.accepted ?? record.acceptedCount ?? 0;
+  const skipped = record.skipped ?? record.skippedCount ?? 0;
+
+  const getAgentBadge = (agentId: string) => {
+    switch (agentId.toLowerCase()) {
+      case 'agent_a':
+        return {
+          label: 'Agent A — The Economist',
+          color: 'text-[#fafafa] border-[#27272a] bg-[#121215]',
+        };
+      case 'agent_b':
+        return {
+          label: 'Agent B — The Hustler',
+          color: 'text-[#fafafa] border-[#27272a] bg-[#121215]',
+        };
+      default:
+        return {
+          label: 'Traditional App Baseline',
+          color: 'text-[#a1a1aa] border-[#27272a] bg-[#121215]',
+        };
+    }
+  };
+
+  const badge = getAgentBadge(record.agentId);
+
   return (
-    <div className="bg-slate-900/70 border border-slate-800 rounded p-3 text-xs">
-      <div className="flex justify-between items-center mb-1">
-        <span className="font-mono font-bold text-slate-300">
-          Tick #{record.tick} · {record.agentId.toUpperCase()}
-        </span>
-        <div className="space-x-1.5 font-mono text-[10px]">
-          <span className="text-emerald-400">Accepted: {record.accepted}</span>
-          <span className="text-rose-400">Skipped: {record.skipped}</span>
+    <div className="bg-[#18181b] border border-[#27272a] rounded-md p-4 text-xs hover:border-[#3f3f46] transition space-y-3">
+      <div className="flex flex-wrap justify-between items-center gap-2">
+        <div className="flex items-center gap-2">
+          <span className="font-mono font-bold text-[#fafafa] text-xs bg-[#121215] px-2.5 py-1 rounded-md border border-[#27272a]">
+            Tick #{record.tick}
+          </span>
+          <span className={`text-[11px] font-mono px-2.5 py-0.5 rounded-md border ${badge.color}`}>
+            {badge.label}
+          </span>
+        </div>
+        <div className="flex items-center space-x-2 font-mono text-[11px]">
+          <span className="text-[#fafafa] bg-[#121215] border border-[#27272a] px-2 py-0.5 rounded-md font-medium">
+            Accepted: {accepted}
+          </span>
+          <span className="text-[#a1a1aa] bg-[#121215] border border-[#27272a] px-2 py-0.5 rounded-md font-medium">
+            Skipped: {skipped}
+          </span>
         </div>
       </div>
 
       {record.reasoning && (
-        <p className="text-slate-400 italic text-[11px] mt-1 border-t border-slate-800/80 pt-1">
-          &quot;{record.reasoning}&quot;
-        </p>
+        <div className="pt-2 border-t border-[#27272a]">
+          <span className="text-[10px] text-[#71717a] font-mono block uppercase tracking-wider font-semibold">
+            Decision Reasoning:
+          </span>
+          <p className="text-[#fafafa] italic text-[11px] mt-1 bg-[#121215] p-2.5 rounded-md border border-[#27272a] leading-relaxed">
+            &quot;{record.reasoning}&quot;
+          </p>
+        </div>
       )}
 
       {tier === 'gov' && record.payload && (
-        <div className="mt-2 bg-black/50 p-2 rounded border border-slate-800">
-          <span className="text-[10px] text-amber-400 font-mono block mb-1">
-            Gov Provenance Payload (Zero LLM Budget Verified):
-          </span>
-          <pre className="text-[10px] text-slate-400 font-mono overflow-x-auto">
+        <div className="mt-2.5 bg-[#121215] p-3 rounded-md border border-[#3f3f46]">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] text-[#fafafa] font-mono font-semibold uppercase tracking-wider">
+              Gov Provenance &amp; Algorithmic Payload (Zero-LLM Runtime)
+            </span>
+            <span className="text-[9px] font-mono text-[#fafafa] bg-[#18181b] px-2 py-0.5 rounded-md border border-[#27272a] font-semibold tracking-wider">
+              AUDIT VERIFIED
+            </span>
+          </div>
+          <pre className="text-[10px] text-[#a1a1aa] font-mono overflow-x-auto max-h-48 bg-[#09090b] p-2 rounded-md border border-[#27272a]">
             {JSON.stringify(record.payload, null, 2)}
           </pre>
         </div>

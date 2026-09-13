@@ -1,34 +1,206 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #0A0E1A;
-  --foreground: #F8FAFC;
-  --agent-a: #3B82F6;
-  --agent-b: #10B981;
-  --baseline: #6B7280;
-  --surge: #F59E0B;
-  --closure: #EF4444;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #121215;
+  --card-hover: #18181b;
+  --border: #27272a;
+  --border-highlight: #3f3f46;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #09090b;
+  color: #fafafa;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Dark mode map container styling */
+/* Dark mode styling for OpenStreetMap tiles without any API key required */
 .dark-tiles {
   filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
 }
 
 .leaflet-container {
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 520px !important;
-  background: #0A0E1A !important;
-  z-index: 10;
+  background: #09090b !important;
 }
 
+/* ==========================================================================
+   LIGHT MODE TECHNICAL MONOCHROME PALETTE
+   ========================================================================== */
+html.light {
+  color-scheme: light;
+}
+
+html.light body {
+  background-color: #f4f4f5 !important;
+  color: #09090b !important;
+}
+
+/* Base and Header Backgrounds */
+html.light .bg-\[\#09090b\] {
+  background-color: #f4f4f5 !important;
+}
+
+html.light header.bg-\[\#09090b\] {
+  background-color: #ffffff !important;
+}
+
+/* Cards and Primary Containers */
+html.light .bg-\[\#121215\] {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-\[\#121215\]\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Surfaces, Inner Containers, Badges and Secondary Cards */
+html.light .bg-\[\#18181b\] {
+  background-color: #f4f4f5 !important;
+}
+
+html.light .hover\:bg-\[\#18181b\]\/50:hover {
+  background-color: rgba(228, 228, 231, 0.45) !important;
+}
+
+html.light .hover\:bg-\[\#18181b\]:hover {
+  background-color: #e4e4e7 !important;
+}
+
+html.light .hover\:bg-\[\#27272a\]:hover {
+  background-color: #e4e4e7 !important;
+}
+
+/* Borders */
+html.light .border-\[\#27272a\] {
+  border-color: #e4e4e7 !important;
+}
+
+html.light .border-\[\#3f3f46\] {
+  border-color: #a1a1aa !important;
+}
+
+html.light .hover\:border-\[\#3f3f46\]:hover {
+  border-color: #71717a !important;
+}
+
+html.light .focus\:border-\[\#3f3f46\]:focus {
+  border-color: #09090b !important;
+}
+
+html.light .divide-\[\#27272a\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e4e4e7 !important;
+}
+
+/* Typography */
+html.light .text-\[\#fafafa\] {
+  color: #09090b !important;
+}
+
+html.light .hover\:text-\[\#fafafa\]:hover {
+  color: #09090b !important;
+}
+
+html.light .text-\[\#a1a1aa\] {
+  color: #52525b !important;
+}
+
+html.light .text-\[\#71717a\] {
+  color: #71717a !important;
+}
+
+html.light .placeholder-\[\#71717a\]::placeholder {
+  color: #a1a1aa !important;
+}
+
+/* Primary Action Buttons (Solid White in Dark -> Solid Black in Light) */
+html.light .bg-\[\#ffffff\],
+html.light .bg-white {
+  background-color: #09090b !important;
+  color: #fafafa !important;
+}
+
+html.light .bg-\[\#ffffff\]:hover,
+html.light .bg-white:hover,
+html.light .hover\:bg-\[\#e4e4e7\]:hover {
+  background-color: #27272a !important;
+  color: #fafafa !important;
+}
+
+/* Form Inputs */
+html.light input.bg-\[\#18181b\] {
+  background-color: #ffffff !important;
+  border-color: #e4e4e7 !important;
+  color: #09090b !important;
+}
+
+/* Brand Square in Top Navbar */
+html.light .w-3\.5.h-3\.5.rounded-\[2px\].bg-\[\#fafafa\] {
+  background-color: #09090b !important;
+}
+
+/* Dropdown Menu Shadow & Styling */
+html.light div\[role="menu"\] {
+  background-color: #ffffff !important;
+  border-color: #e4e4e7 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Code Blocks & Raw Provenance Logs */
+html.light pre.bg-\[\#09090b\] {
+  background-color: #f4f4f5 !important;
+  border-color: #e4e4e7 !important;
+  color: #09090b !important;
+}
+
+/* Map tiles in light mode */
+html.light .dark-tiles {
+  filter: none !important;
+}
+
+html.light .leaflet-container {
+  background: #f4f4f5 !important;
+}
+
+/* SVG Elements (VehicleDonutChart & RouteNetworkMap) */
+html.light svg circle[stroke="#27272a"] {
+  stroke: #e4e4e7 !important;
+}
+
+html.light svg circle[stroke="#fafafa"] {
+  stroke: #09090b !important;
+}
+
+html.light svg text[fill="#fafafa"] {
+  fill: #09090b !important;
+}
+
+html.light svg rect[fill="#18181b"] {
+  fill: #f4f4f5 !important;
+  stroke: #e4e4e7 !important;
+}
+
+html.light svg rect[fill="#ffffff"] {
+  fill: #09090b !important;
+}
+
+html.light svg text[fill="#09090b"] {
+  fill: #fafafa !important;
+}
+
+html.light span.bg-\[\#fafafa\] {
+  background-color: #09090b !important;
+}
+
+html.light span.bg-\[\#27272a\] {
+  background-color: #e4e4e7 !important;
+}
