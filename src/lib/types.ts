@@ -10,12 +10,16 @@ export interface Order {
   id: string;
   platform: string;
   order_type: string;
+  restaurant_name?: string;
+  food_icon?: string;
+  ticket_mxn?: number;
+  municipality?: string;
   food_type?: 'snack' | 'fast_food' | 'casual_dining' | 'groceries' | 'buffet_gourmet';
   prep_time_min?: number;
   traffic_density?: 'low' | 'medium' | 'high' | 'jam';
   tip?: number;
-  pickup: { lat: number; lon: number; lng?: number; zone: string };
-  dropoff: { lat: number; lon: number; lng?: number; zone: string };
+  pickup: { lat: number; lon: number; lng?: number; zone: string; name?: string };
+  dropoff: { lat: number; lon: number; lng?: number; zone: string; name?: string };
   base_pay: number;
   surge_multiplier: number;
   total_pay: number;

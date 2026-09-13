@@ -25,33 +25,56 @@ export const EventBanner: React.FC<EventBannerProps> = ({ events, onTriggerEvent
 
         {onTriggerEvent && (
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => onTriggerEvent(0)}
-              title="Disparar tarifa dinámica 2.5x en San Pedro"
-              className="px-3 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1 cursor-pointer"
-            >
-              <span>⚡</span> + Surge 2.5x
-            </button>
+            <span className="text-[11px] font-mono text-[#71717a] mr-1 hidden lg:inline">
+              Inyector para Jueces:
+            </span>
             <button
               onClick={() => onTriggerEvent(1)}
-              title="Bloqueo total en Av. Gonzalitos / Constitución (Velocidad cae a 4 km/h)"
-              className="px-3 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1 cursor-pointer"
+              title="Nivel Medio: Tarifa 2.5x en San Pedro Centrito Valle"
+              className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
-              <span>🚧</span> + Cierre Vial
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <span>⚡ Surge 2.5x</span>
+            </button>
+            <button
+              onClick={() => onTriggerEvent(0)}
+              title="Nivel Hardcore: Inundación total en Par Vial Constitución / Félix U. Gómez"
+              className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+              <span>🚧 Inundación Constitución</span>
             </button>
             <button
               onClick={() => onTriggerEvent(2)}
-              title="Tormenta tropical: -40% velocidad en ruta y asfalto resbaloso"
-              className="px-3 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1 cursor-pointer"
+              title="Nivel Hardcore: Clásico Regio en Estadio BBVA (Surge 3.0x masivo)"
+              className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
-              <span>⛈️</span> + Tormenta
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              <span>⚽ Clásico Regio BBVA</span>
+            </button>
+            <button
+              onClick={() => onTriggerEvent(4)}
+              title="Nivel Medio: Tormenta Torrencial en Cuenca Río Santa Catarina"
+              className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
+              <span>⛈️ Tormenta Torrencial</span>
             </button>
             <button
               onClick={() => onTriggerEvent(3)}
-              title="Zona peligrosa: -$45 MXN penalización si el repartidor ingresa"
-              className="px-3 py-1.5 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1 cursor-pointer"
+              title="Nivel Medio: Cierre vial y obra en Gonzalitos & Fleteros"
+              className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
             >
-              <span>⚠️</span> + Zona Riesgo
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+              <span>🚧 Bloqueo Gonzalitos</span>
+            </button>
+            <button
+              onClick={() => onTriggerEvent(5)}
+              title="Nivel Fácil: Zona de Riesgo Crítico en Colonia Independencia (-$45 MXN)"
+              className="px-2.5 py-1 text-xs bg-[#18181b] hover:bg-[#27272a] text-[#a1a1aa] hover:text-[#fafafa] border border-[#27272a] rounded-md font-mono transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+              <span>⚠️ Riesgo Independencia</span>
             </button>
           </div>
         )}

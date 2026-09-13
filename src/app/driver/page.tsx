@@ -149,29 +149,35 @@ export default function DriverDashboardPage() {
     {
       id: 'REP-4091',
       name: 'Agent A — The Economist',
-      zone: 'Norte Centro',
+      zone: 'San Pedro / Centrito & Calzada del Valle',
       vehicle: 'Moto',
       deliveriesToday: agentA.completedOrders ?? 0,
       status: statusA.status,
       statusType: statusA.statusType,
+      currentCorridor: (agentA as any).corridorName || 'Calzada del Valle',
+      netEarnings: (agentA as any).netEarnings ?? agentA.currentEarnings,
     },
     {
       id: 'REP-2104',
       name: 'Agent B — The Hustler',
-      zone: 'San Isidro',
+      zone: 'Monterrey Sur / Garza Sada & Nuevo Sur',
       vehicle: 'Moto',
       deliveriesToday: agentB.completedOrders ?? 0,
       status: statusB.status,
       statusType: statusB.statusType,
+      currentCorridor: (agentB as any).corridorName || 'Av. Eugenio Garza Sada',
+      netEarnings: (agentB as any).netEarnings ?? agentB.currentEarnings,
     },
     {
       id: 'REP-3301',
       name: 'Traditional App Baseline',
-      zone: 'Surco',
+      zone: 'Monterrey Centro / Macroplaza & Morelos',
       vehicle: 'Moto',
       deliveriesToday: baseline.completedOrders ?? 0,
       status: statusBase.status,
       statusType: statusBase.statusType,
+      currentCorridor: (baseline as any).corridorName || 'Av. Constitución',
+      netEarnings: (baseline as any).netEarnings ?? baseline.currentEarnings,
     },
   ];
 
@@ -188,37 +194,53 @@ export default function DriverDashboardPage() {
       d.zone.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Recent Orders Data
-  const recentOrders = [
-    {
-      id: 'ORD-2391',
-      destination: 'Av. Eugenio Garza Sada #2501 Sur, Col. Tec',
-      assignedTime: '14:32',
-      courier: 'Agent A — The E...',
-      amount: '$24.50',
-    },
-    {
-      id: 'ORD-9910',
-      destination: 'Av. Lázaro Cárdenas #2400, Residencial',
-      assignedTime: '14:35',
-      courier: 'Agent B — The H...',
-      amount: '$18.00',
-    },
-    {
-      id: 'ORD-4491',
-      destination: 'Av. José Vasconcelos #345 Ote., Col. Del Valle',
-      assignedTime: '14:41',
-      courier: 'Agent A — The E...',
-      amount: '$45.20',
-    },
-    {
-      id: 'ORD-1049',
-      destination: 'Calle José María Morelos #550 Ote., Barrio Ant',
-      assignedTime: '14:48',
-      courier: 'Traditional App...',
-      amount: '$12.90',
-    },
-  ];
+  // Recent Orders Data (Dynamic when shift is running or authentic Monterrey fallbacks)
+  const recentOrders =
+    shiftState?.newOrders && shiftState.newOrders.length > 0
+      ? shiftState.newOrders.slice(0, 4).map((ord, idx) => ({
+          id: (ord.id || ord.order_id || `ORD-${idx}`).toUpperCase().slice(0, 8),
+          destination: ord.dropoff.name
+            ? `${ord.dropoff.name}, ${ord.dropoff.zone || 'Monterrey'}`
+            : `${ord.dropoff.zone || 'Monterrey Residencial'}`,
+          restaurant: ord.restaurant_name || ord.pickup.name || 'Restaurante Monterrey',
+          assignedTime: `Tick ${shiftState.tick || 1}`,
+          courier: idx % 2 === 0 ? 'Agent A (Economist)' : 'Agent B (Hustler)',
+          amount: `$${(ord.payout || ord.total_pay || 35).toFixed(2)}`,
+        }))
+      : [
+          {
+            id: 'ORD-2391',
+            destination: 'Colonia Del Valle, San Pedro Garza García',
+            restaurant: 'Sonora Grill Prime (Centrito Valle)',
+            assignedTime: '14:32',
+            courier: 'Agent A (Economist)',
+            amount: '$48.50',
+          },
+          {
+            id: 'ORD-9910',
+            destination: 'DistritoTec / Roma, Monterrey Sur',
+            restaurant: 'Taquería Juárez (Garza Sada)',
+            assignedTime: '14:35',
+            courier: 'Agent B (Hustler)',
+            amount: '$36.00',
+          },
+          {
+            id: 'ORD-4491',
+            destination: 'Fuentes del Valle, San Pedro',
+            restaurant: 'Cara de Vaca (Calzada del Valle)',
+            assignedTime: '14:41',
+            courier: 'Agent A (Economist)',
+            amount: '$54.20',
+          },
+          {
+            id: 'ORD-1049',
+            destination: 'Calle Morelos #550, Barrio Antiguo Centro',
+            restaurant: 'Almacén 42 (Morelos)',
+            assignedTime: '14:48',
+            courier: 'Traditional Baseline',
+            amount: '$28.90',
+          },
+        ];
 
   const handleExportReport = () => {
     const reportData = {

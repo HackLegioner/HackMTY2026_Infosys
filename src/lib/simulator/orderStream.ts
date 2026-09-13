@@ -1,6 +1,30 @@
 import { Order, DisruptionEvent } from '@/lib/types';
 import { getMonterreyTimeOfDay, getZoneBottleneck } from '@/lib/traffic/congestionModel';
 
+export interface RestaurantLocation {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  municipality: string;
+  corridor: string;
+  foodType: FoodType;
+  foodIcon: string;
+  avgTicketMxn: number;
+  prepTimeRange: [number, number]; // [min, max]
+  weight: number;
+}
+
+export interface DropoffLocation {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  municipality: string;
+  sector: string;
+  weight: number;
+}
+
 export interface ZoneLocation {
   lat: number;
   lon: number;
@@ -11,219 +35,308 @@ export interface ZoneLocation {
   description?: string;
 }
 
-export const MONTERREY_ZONES: ZoneLocation[] = [
-  // ─── MONTERREY ───
-  {
-    lat: 25.6692,
-    lon: -100.3099,
-    name: 'Centro / Macroplaza',
-    weight: 1.6,
-    type: 'both',
-    municipality: 'Monterrey',
-    description: 'Corredor comercial Morelos, Barrio Antiguo y restaurantes Centro',
-  },
-  {
-    lat: 25.6870,
-    lon: -100.3540,
-    name: 'Galerías Monterrey / San Jerónimo',
-    weight: 1.7,
-    type: 'pickup',
-    municipality: 'Monterrey',
-    description: 'Food court principal Galerías y restaurantes Av. Insurgentes',
-  },
-  {
-    lat: 25.7280,
-    lon: -100.3950,
-    name: 'Plaza Cumbres (Leones)',
-    weight: 1.5,
-    type: 'both',
-    municipality: 'Monterrey',
-    description: 'Hub gastronómico del poniente sobre Paseo de los Leones',
-  },
-  {
-    lat: 25.7420,
-    lon: -100.4280,
-    name: 'Cumbres Elite / Puerta de Hierro',
-    weight: 1.4,
-    type: 'dropoff',
-    municipality: 'Monterrey',
-    description: 'Fraccionamientos residenciales de alta densidad en Cumbres Poniente',
-  },
-  {
-    lat: 25.6514,
-    lon: -100.2895,
-    name: 'Tec / DistritoTec',
-    weight: 1.8,
-    type: 'both',
-    municipality: 'Monterrey',
-    description: 'Campus ITESM, Plaza Nuevo Sur y corredor Garza Sada',
-  },
-  {
-    lat: 25.6320,
-    lon: -100.2780,
-    name: 'Contry / Las Águilas',
-    weight: 1.2,
-    type: 'dropoff',
-    municipality: 'Monterrey',
-    description: 'Zona residencial Contry al sur sobre Av. Revolución',
-  },
-  {
-    lat: 25.6745,
-    lon: -100.3440,
-    name: 'Obispado / Chepevera',
-    weight: 1.1,
-    type: 'dropoff',
-    municipality: 'Monterrey',
-    description: 'Zona residencial tradicional y corporativos de Av. Hidalgo',
-  },
-  {
-    lat: 25.6905,
-    lon: -100.3465,
-    name: 'Mitras / Área Médica UANL',
-    weight: 1.3,
-    type: 'pickup',
-    municipality: 'Monterrey',
-    description: 'Dark kitchens y comida rápida alrededor del Hospital Universitario',
-  },
-  {
-    lat: 25.6780,
-    lon: -100.3700,
-    name: 'San Jerónimo Residencial',
-    weight: 1.2,
-    type: 'dropoff',
-    municipality: 'Monterrey',
-    description: 'Área residencial sobre Anillo Periférico',
-  },
-  {
-    lat: 25.5780,
-    lon: -100.2480,
-    name: 'Carretera Nacional / Esfera',
-    weight: 1.4,
-    type: 'both',
-    municipality: 'Monterrey',
-    description: 'Esfera City Center, Pueblo Serena y colonias de Carretera Nacional',
-  },
-
+export const REAL_MONTERREY_RESTAURANTS: RestaurantLocation[] = [
   // ─── SAN PEDRO GARZA GARCÍA ───
   {
-    lat: 25.6574,
-    lon: -100.3684,
-    name: 'Centrito Valle',
+    id: 'rest_sonora_grill',
+    name: 'Sonora Grill Prime (Centrito Valle)',
+    lat: 25.657821,
+    lon: -100.367412,
+    municipality: 'San Pedro Garza García',
+    corridor: 'Calzada del Valle / Río Mississipi',
+    foodType: 'buffet_gourmet',
+    foodIcon: '🥩',
+    avgTicketMxn: 850,
+    prepTimeRange: [18, 25],
     weight: 1.9,
-    type: 'both',
-    municipality: 'San Pedro Garza García',
-    description: 'Corredor gastronómico de alta gama en Calzada del Valle',
   },
   {
-    lat: 25.6375,
-    lon: -100.3285,
-    name: 'Valle Oriente / Fashion Drive',
-    weight: 1.9,
-    type: 'both',
+    id: 'rest_cara_de_vaca',
+    name: 'Cara de Vaca (Calzada del Valle)',
+    lat: 25.659104,
+    lon: -100.361920,
     municipality: 'San Pedro Garza García',
-    description: 'Plaza Fiesta San Agustín, Fashion Drive y torres corporativas',
+    corridor: 'Calzada del Valle',
+    foodType: 'buffet_gourmet',
+    foodIcon: '🍷',
+    avgTicketMxn: 720,
+    prepTimeRange: [15, 22],
+    weight: 1.8,
   },
   {
-    lat: 25.6520,
-    lon: -100.3620,
-    name: 'Colonia Del Valle',
-    weight: 1.5,
-    type: 'dropoff',
+    id: 'rest_gallo_71',
+    name: 'Gallo 71 (Vasconcelos)',
+    lat: 25.658230,
+    lon: -100.369840,
     municipality: 'San Pedro Garza García',
-    description: 'Zona residencial de alto valor adquisitivo en San Pedro',
+    corridor: 'Av. José Vasconcelos',
+    foodType: 'casual_dining',
+    foodIcon: '🍗',
+    avgTicketMxn: 650,
+    prepTimeRange: [14, 20],
+    weight: 1.7,
   },
   {
-    lat: 25.6590,
-    lon: -100.4200,
-    name: 'Valle Poniente / UDEM',
-    weight: 1.3,
-    type: 'both',
+    id: 'rest_shake_shack',
+    name: 'Shake Shack (Fashion Drive)',
+    lat: 25.637840,
+    lon: -100.328910,
     municipality: 'San Pedro Garza García',
-    description: 'Campus UDEM, Vía Cordillera y desarrollos de Valle Poniente',
+    corridor: 'Valle Oriente / Diego Rivera',
+    foodType: 'fast_food',
+    foodIcon: '🍔',
+    avgTicketMxn: 320,
+    prepTimeRange: [8, 12],
+    weight: 2.0,
+  },
+  {
+    id: 'rest_la_torrada',
+    name: 'La Torrada (Plaza Fiesta San Agustín)',
+    lat: 25.639120,
+    lon: -100.331200,
+    municipality: 'San Pedro Garza García',
+    corridor: 'Real San Agustín',
+    foodType: 'casual_dining',
+    foodIcon: '🍖',
+    avgTicketMxn: 580,
+    prepTimeRange: [16, 24],
+    weight: 1.8,
   },
 
-  // ─── APODACA ───
+  // ─── MONTERREY SUR & DISTRITOTEC ───
   {
-    lat: 25.7815,
-    lon: -100.1885,
-    name: 'Apodaca Centro',
-    weight: 1.2,
-    type: 'both',
-    municipality: 'Apodaca',
-    description: 'Centro de Apodaca y fraccionamientos de Av. Zaragoza',
+    id: 'rest_taqueria_juarez',
+    name: 'Taquería Juárez (Garza Sada)',
+    lat: 25.651890,
+    lon: -100.289450,
+    municipality: 'Monterrey',
+    corridor: 'DistritoTec / Garza Sada',
+    foodType: 'snack',
+    foodIcon: '🌮',
+    avgTicketMxn: 180,
+    prepTimeRange: [6, 10],
+    weight: 2.1,
   },
   {
-    lat: 25.7275,
-    lon: -100.2185,
-    name: 'Paseo La Fe / Citadel',
+    id: 'rest_sierra_madre',
+    name: 'Sierra Madre Brewing Co. (Nuevo Sur)',
+    lat: 25.653410,
+    lon: -100.282100,
+    municipality: 'Monterrey',
+    corridor: 'Av. Revolución / Nuevo Sur',
+    foodType: 'casual_dining',
+    foodIcon: '🍺',
+    avgTicketMxn: 380,
+    prepTimeRange: [12, 16],
+    weight: 1.9,
+  },
+  {
+    id: 'rest_tacos_el_primo',
+    name: 'Tacos El Primo (Av. Revolución)',
+    lat: 25.642100,
+    lon: -100.281200,
+    municipality: 'Monterrey',
+    corridor: 'Contry / Av. Revolución',
+    foodType: 'snack',
+    foodIcon: '🌮',
+    avgTicketMxn: 160,
+    prepTimeRange: [5, 8],
     weight: 1.6,
-    type: 'both',
-    municipality: 'Apodaca',
-    description: 'Gran polo comercial sobre Miguel Alemán con alta concentración restaurantera',
+  },
+
+  // ─── MONTERREY CENTRO & OBISPADO ───
+  {
+    id: 'rest_almacen_42',
+    name: 'Almacén 42 (Barrio Antiguo)',
+    lat: 25.666980,
+    lon: -100.306820,
+    municipality: 'Monterrey',
+    corridor: 'Calle Morelos / Macroplaza',
+    foodType: 'casual_dining',
+    foodIcon: '🍕',
+    avgTicketMxn: 310,
+    prepTimeRange: [10, 15],
+    weight: 1.7,
+  },
+  {
+    id: 'rest_me_muero_de_hambre',
+    name: 'Me Muero de Hambre (Barrio Antiguo)',
+    lat: 25.667450,
+    lon: -100.305910,
+    municipality: 'Monterrey',
+    corridor: 'Barrio Antiguo Morelos',
+    foodType: 'casual_dining',
+    foodIcon: '🌯',
+    avgTicketMxn: 260,
+    prepTimeRange: [12, 18],
+    weight: 1.5,
+  },
+  {
+    id: 'rest_botanero_moritas',
+    name: 'Botanero Moritas (Obispado)',
+    lat: 25.674890,
+    lon: -100.344210,
+    municipality: 'Monterrey',
+    corridor: 'Av. Hidalgo / Chepevera',
+    foodType: 'casual_dining',
+    foodIcon: '🧀',
+    avgTicketMxn: 420,
+    prepTimeRange: [10, 15],
+    weight: 1.4,
+  },
+
+  // ─── MONTERREY PONIENTE (SAN JERÓNIMO & CUMBRES) ───
+  {
+    id: 'rest_la_nacional',
+    name: 'La Nacional (San Jerónimo)',
+    lat: 25.687420,
+    lon: -100.354890,
+    municipality: 'Monterrey',
+    corridor: 'Av. Fleteros / Gonzalitos',
+    foodType: 'buffet_gourmet',
+    foodIcon: '🥩',
+    avgTicketMxn: 780,
+    prepTimeRange: [16, 22],
+    weight: 1.8,
+  },
+  {
+    id: 'rest_arbolitos_cajeme',
+    name: 'Los Arbolitos de Cajeme (Galerías Mty)',
+    lat: 25.688150,
+    lon: -100.352100,
+    municipality: 'Monterrey',
+    corridor: 'Av. Insurgentes / Gonzalitos',
+    foodType: 'casual_dining',
+    foodIcon: '🦐',
+    avgTicketMxn: 490,
+    prepTimeRange: [14, 18],
+    weight: 1.7,
+  },
+  {
+    id: 'rest_la_catarina',
+    name: 'La Catarina (Paseo de los Leones)',
+    lat: 25.728910,
+    lon: -100.395420,
+    municipality: 'Monterrey',
+    corridor: 'Cumbres / Av. Leones',
+    foodType: 'buffet_gourmet',
+    foodIcon: '🍲',
+    avgTicketMxn: 620,
+    prepTimeRange: [18, 25],
+    weight: 1.6,
+  },
+  {
+    id: 'rest_bww_cumbres',
+    name: 'Buffalo Wild Wings (Plaza Cumbres)',
+    lat: 25.729540,
+    lon: -100.397810,
+    municipality: 'Monterrey',
+    corridor: 'Plaza Cumbres / Av. Hacienda Peñuelas',
+    foodType: 'fast_food',
+    foodIcon: '🍗',
+    avgTicketMxn: 340,
+    prepTimeRange: [10, 14],
+    weight: 1.7,
   },
 
   // ─── SAN NICOLÁS DE LOS GARZA ───
   {
-    lat: 25.7270,
-    lon: -100.3120,
-    name: 'San Nicolás / Anáhuac & CU',
-    weight: 1.5,
-    type: 'both',
+    id: 'rest_gran_pastor',
+    name: 'El Gran Pastor (Plaza Fiesta Anáhuac)',
+    lat: 25.727820,
+    lon: -100.312940,
     municipality: 'San Nicolás de los Garza',
-    description: 'Ciudad Universitaria UANL y Plaza Fiesta Anáhuac',
+    corridor: 'Av. Manuel L. Barragán',
+    foodType: 'buffet_gourmet',
+    foodIcon: '🍖',
+    avgTicketMxn: 520,
+    prepTimeRange: [15, 20],
+    weight: 1.6,
   },
   {
-    lat: 25.7450,
-    lon: -100.2850,
-    name: 'Las Puentes / San Nicolás',
-    weight: 1.2,
-    type: 'dropoff',
+    id: 'rest_atarantados',
+    name: 'Tacos Atarantados (Ciudad Universitaria UANL)',
+    lat: 25.724120,
+    lon: -100.308760,
     municipality: 'San Nicolás de los Garza',
-    description: 'Sectores residenciales de Av. Las Puentes y República Mexicana',
+    corridor: 'Av. Universidad / Estadio Universitario',
+    foodType: 'snack',
+    foodIcon: '🌮',
+    avgTicketMxn: 210,
+    prepTimeRange: [6, 9],
+    weight: 1.9,
   },
 
-  // ─── GENERAL ESCOBEDO ───
+  // ─── APODACA ───
   {
-    lat: 25.7785,
-    lon: -100.3205,
-    name: 'Escobedo / Plaza Sendero',
-    weight: 1.3,
-    type: 'both',
-    municipality: 'General Escobedo',
-    description: 'Plaza Sendero Escobedo sobre Av. Sendero Divisorio y Barragán',
+    id: 'rest_italiannis',
+    name: 'Italianni’s (Paseo La Fe / Citadel)',
+    lat: 25.727910,
+    lon: -100.218920,
+    municipality: 'Apodaca',
+    corridor: 'Av. Miguel Alemán',
+    foodType: 'casual_dining',
+    foodIcon: '🍝',
+    avgTicketMxn: 390,
+    prepTimeRange: [14, 18],
+    weight: 1.7,
+  },
+  {
+    id: 'rest_huerfanos',
+    name: 'Tacos Los Huérfanos (Apodaca Centro)',
+    lat: 25.781890,
+    lon: -100.188420,
+    municipality: 'Apodaca',
+    corridor: 'Av. Zaragoza / Centro',
+    foodType: 'snack',
+    foodIcon: '🌮',
+    avgTicketMxn: 140,
+    prepTimeRange: [5, 8],
+    weight: 1.4,
   },
 
   // ─── SANTA CATARINA ───
   {
-    lat: 25.6760,
-    lon: -100.4550,
-    name: 'Santa Catarina / Paseo',
-    weight: 1.1,
-    type: 'both',
+    id: 'rest_mochomos',
+    name: 'Mochomos (Vía Cordillera)',
+    lat: 25.659840,
+    lon: -100.421500,
     municipality: 'Santa Catarina',
-    description: 'Paseo Santa Catarina y zona comercial Carretera Saltillo',
-  },
-
-  // ─── GUADALUPE ───
-  {
-    lat: 25.6980,
-    lon: -100.2520,
-    name: 'Linda Vista (Guadalupe)',
-    weight: 1.4,
-    type: 'both',
-    municipality: 'Guadalupe',
-    description: 'Plaza Lindavista y comercios sobre Av. Miguel Alemán',
-  },
-  {
-    lat: 25.6740,
-    lon: -100.2450,
-    name: 'Guadalupe Centro / Estadio BBVA',
-    weight: 1.2,
-    type: 'dropoff',
-    municipality: 'Guadalupe',
-    description: 'Centro de Guadalupe, Residencial Las Quintas y zona Rayados BBVA',
+    corridor: 'Valle Poniente / Alfonso Reyes',
+    foodType: 'buffet_gourmet',
+    foodIcon: '🥩',
+    avgTicketMxn: 820,
+    prepTimeRange: [16, 22],
+    weight: 1.5,
   },
 ];
+
+export const REAL_MONTERREY_DROPOFFS: DropoffLocation[] = [
+  { id: 'drop_del_valle', name: 'Colonia Del Valle', lat: 25.6520, lon: -100.3620, municipality: 'San Pedro', sector: 'Valle Central', weight: 1.9 },
+  { id: 'drop_fuentes_valle', name: 'Fuentes del Valle', lat: 25.6560, lon: -100.3540, municipality: 'San Pedro', sector: 'Valle Oriente', weight: 1.6 },
+  { id: 'drop_valle_oriente', name: 'Valle Oriente Residencial', lat: 25.6320, lon: -100.3240, municipality: 'San Pedro', sector: 'Lázaro Cárdenas', weight: 1.8 },
+  { id: 'drop_distrito_tec', name: 'DistritoTec / Roma', lat: 25.6500, lon: -100.2920, municipality: 'Monterrey', sector: 'Sur Garza Sada', weight: 2.0 },
+  { id: 'drop_contry', name: 'Contry Las Águilas', lat: 25.6320, lon: -100.2780, municipality: 'Monterrey', sector: 'Sur Revolución', weight: 1.5 },
+  { id: 'drop_obispado', name: 'Obispado / Chepevera', lat: 25.6745, lon: -100.3440, municipality: 'Monterrey', sector: 'Centro-Poniente', weight: 1.3 },
+  { id: 'drop_san_jeronimo', name: 'San Jerónimo Residencial', lat: 25.6780, lon: -100.3700, municipality: 'Monterrey', sector: 'Poniente', weight: 1.6 },
+  { id: 'drop_cumbres_elite', name: 'Cumbres Elite / Puerta de Hierro', lat: 25.7420, lon: -100.4280, municipality: 'Monterrey', sector: 'Cumbres Poniente', weight: 1.7 },
+  { id: 'drop_cumbres_4to', name: 'Cumbres 4to Sector', lat: 25.7190, lon: -100.3850, municipality: 'Monterrey', sector: 'Leones', weight: 1.5 },
+  { id: 'drop_anahuac', name: 'Anáhuac Residencial', lat: 25.7310, lon: -100.3150, municipality: 'San Nicolás', sector: 'Barragán', weight: 1.6 },
+  { id: 'drop_las_puentes', name: 'Las Puentes 5to Sector', lat: 25.7450, lon: -100.2850, municipality: 'San Nicolás', sector: 'República Mexicana', weight: 1.4 },
+  { id: 'drop_hacienda_palmas', name: 'Hacienda Las Palmas', lat: 25.7350, lon: -100.2080, municipality: 'Apodaca', sector: 'Concordia', weight: 1.5 },
+  { id: 'drop_linda_vista', name: 'Linda Vista / Miguel Alemán', lat: 25.6980, lon: -100.2520, municipality: 'Guadalupe', sector: 'Linda Vista', weight: 1.5 },
+  { id: 'drop_valle_poniente', name: 'Vía Cordillera Residencial', lat: 25.6610, lon: -100.4180, municipality: 'Santa Catarina', sector: 'Valle Poniente', weight: 1.4 },
+];
+
+export const MONTERREY_ZONES = REAL_MONTERREY_RESTAURANTS.map((r) => ({
+  lat: r.lat,
+  lon: r.lon,
+  name: r.name,
+  weight: r.weight,
+  type: 'pickup' as const,
+  municipality: r.municipality,
+  description: r.corridor,
+}));
 
 const PLATFORMS = ['rappi', 'didi', 'uber_eats'];
 
@@ -271,41 +384,55 @@ export class OrderStream {
     return x - Math.floor(x);
   }
 
-  private weightedPick(zones: ZoneLocation[]): ZoneLocation {
-    const totalWeight = zones.reduce((sum, z) => sum + (z.weight || 1.0), 0);
+  private weightedPickRestaurant(restaurants: RestaurantLocation[]): RestaurantLocation {
+    const totalWeight = restaurants.reduce((sum, r) => sum + (r.weight || 1.0), 0);
     let r = this.random() * totalWeight;
-    for (const z of zones) {
-      r -= z.weight || 1.0;
-      if (r <= 0) return z;
+    for (const rest of restaurants) {
+      r -= rest.weight || 1.0;
+      if (r <= 0) return rest;
     }
-    return zones[zones.length - 1];
+    return restaurants[restaurants.length - 1];
   }
 
-  public pickPickupZone(): ZoneLocation {
-    const candidates = MONTERREY_ZONES.filter((z) => z.type === 'pickup' || z.type === 'both');
-    return this.weightedPick(candidates.length > 0 ? candidates : MONTERREY_ZONES);
+  private weightedPickDropoff(dropoffs: DropoffLocation[]): DropoffLocation {
+    const totalWeight = dropoffs.reduce((sum, d) => sum + (d.weight || 1.0), 0);
+    let r = this.random() * totalWeight;
+    for (const drop of dropoffs) {
+      r -= drop.weight || 1.0;
+      if (r <= 0) return drop;
+    }
+    return dropoffs[dropoffs.length - 1];
   }
 
-  public pickDropoffZone(pickupZone?: ZoneLocation): ZoneLocation {
-    const candidates = MONTERREY_ZONES.filter((z) => z.type === 'dropoff' || z.type === 'both');
+  public pickPickupRestaurant(): RestaurantLocation {
+    return this.weightedPickRestaurant(REAL_MONTERREY_RESTAURANTS);
+  }
 
-    // Preferir entregas dentro de un radio urbano estricto de motocicleta (<= 5.5 km)
-    if (pickupZone) {
-      const withinRadius = candidates.filter((z) => {
-        if (z.name === pickupZone.name) return false;
-        const d = haversineKm(pickupZone.lat, pickupZone.lon, z.lat, z.lon);
-        return d <= 5.5;
+  public pickDropoffLocation(restaurant?: RestaurantLocation): DropoffLocation {
+    if (restaurant) {
+      // Prioritize urban radius (1.0 km to 6.5 km)
+      const nearDropoffs = REAL_MONTERREY_DROPOFFS.filter((d) => {
+        const dist = haversineKm(restaurant.lat, restaurant.lon, d.lat, d.lon);
+        return dist >= 1.0 && dist <= 7.0;
       });
-      if (withinRadius.length > 0) {
-        return this.weightedPick(withinRadius);
+      if (nearDropoffs.length > 0) {
+        return this.weightedPickDropoff(nearDropoffs);
       }
     }
-
-    return this.weightedPick(candidates.length > 0 ? candidates : MONTERREY_ZONES);
+    return this.weightedPickDropoff(REAL_MONTERREY_DROPOFFS);
   }
 
   public pickZone(): ZoneLocation {
-    return this.weightedPick(MONTERREY_ZONES);
+    const r = this.pickPickupRestaurant();
+    return {
+      lat: r.lat,
+      lon: r.lon,
+      name: r.name,
+      weight: r.weight,
+      type: 'pickup',
+      municipality: r.municipality,
+      description: r.corridor,
+    };
   }
 
   public generateTick(elapsedSeconds: number, activeEvents: DisruptionEvent[]): Order[] {
@@ -316,11 +443,11 @@ export class OrderStream {
     const hasRain = activeEvents.some((e) => e.event_type === 'rain');
     const hasHeat = activeEvents.some((e) => e.event_type === 'extreme_heat');
 
-    // Aggregate surge multiplier from active events (capped realistically at 1.75x)
+    // Aggregate surge multiplier from active events (capped realistically at 2.5x)
     let surgeMultiplier = 1.0;
     for (const evt of activeEvents) {
       if (evt.metadata?.multiplier) {
-        surgeMultiplier = Math.max(surgeMultiplier, Math.min(1.75, evt.metadata.multiplier));
+        surgeMultiplier = Math.max(surgeMultiplier, Math.min(2.5, evt.metadata.multiplier));
       }
     }
 
@@ -328,35 +455,26 @@ export class OrderStream {
     const nOrders = Math.floor(this.random() * 3) + 1;
     const orders: Order[] = [];
 
-    const foodTypeKeys: FoodType[] = [
-      'snack',
-      'fast_food',
-      'fast_food', // Higher frequency in delivery apps
-      'casual_dining',
-      'groceries',
-      'buffet_gourmet',
-    ];
-
     for (let i = 0; i < nOrders; i++) {
-      const pickupZone = this.pickPickupZone();
-      const dropoffZone = this.pickDropoffZone(pickupZone);
-      const foodType = foodTypeKeys[Math.floor(this.random() * foodTypeKeys.length)];
+      const restaurant = this.pickPickupRestaurant();
+      const dropoff = this.pickDropoffLocation(restaurant);
+      const foodType = restaurant.foodType;
 
-      // 1. Kaggle Prep Time Distribution
-      const [minPrep, maxPrep] = KAGGLE_PREP_TIMES[foodType];
+      // 1. Kaggle Prep Time Distribution based on real restaurant kitchen
+      const [minPrep, maxPrep] = restaurant.prepTimeRange || KAGGLE_PREP_TIMES[foodType];
       const prepTimeMin = Math.round(minPrep + this.random() * (maxPrep - minPrep));
 
-      // 2. Pricing and distance calculation (max 6.5 km urban motorbike trip)
+      // 2. Pricing and distance calculation (1.2 km to 6.5 km urban motorbike trip)
       const [minPay, maxPay] = BASE_PAY_RANGES[foodType];
-      const rawDist = haversineKm(pickupZone.lat, pickupZone.lon, dropoffZone.lat, dropoffZone.lon);
+      const rawDist = haversineKm(restaurant.lat, restaurant.lon, dropoff.lat, dropoff.lon);
       const estDist = Math.max(1.2, Math.min(6.5, Math.round(rawDist * 1.35 * 10) / 10));
-      
+
       // Distance fee: $3.50 MXN/km beyond 2km (calibrated Rappi/DiDi Monterrey rate)
       const distBonus = Math.max(0, (estDist - 2.0) * 3.5);
       const basePay = Math.round(minPay + this.random() * (maxPay - minPay) + distBonus);
 
       // 3. Traffic density evaluation along corridor
-      const zoneBottleneck = getZoneBottleneck(pickupZone.lat, pickupZone.lon);
+      const zoneBottleneck = getZoneBottleneck(restaurant.lat, restaurant.lon);
       let trafficDensity: Order['traffic_density'] = 'low';
       if (timeInfo.isRushHour && zoneBottleneck.zoneMultiplier <= 0.55) {
         trafficDensity = 'jam';
@@ -376,16 +494,16 @@ export class OrderStream {
       let tip = 0;
       const tipRoll = this.random();
       if (hasRain || hasHeat) {
-        // Bad weather: 40% tip rate ($10 - $25)
-        if (tipRoll > 0.60) {
-          tip = Math.round(10 + this.random() * 15);
+        // Bad weather: 45% tip rate ($12 - $30)
+        if (tipRoll > 0.55) {
+          tip = Math.round(12 + this.random() * 18);
         }
       } else {
-        // Standard distribution: 65% $0, 25% $8-$15, 10% $18-$25
-        if (tipRoll >= 0.65 && tipRoll < 0.90) {
-          tip = Math.round(8 + this.random() * 7);
-        } else if (tipRoll >= 0.90) {
-          tip = Math.round(18 + this.random() * 8);
+        // Standard distribution: 60% $0, 25% $10-$20, 15% $20-$35
+        if (tipRoll >= 0.60 && tipRoll < 0.85) {
+          tip = Math.round(10 + this.random() * 10);
+        } else if (tipRoll >= 0.85) {
+          tip = Math.round(20 + this.random() * 15);
         }
       }
 
@@ -393,28 +511,40 @@ export class OrderStream {
       const payPerKm = Math.round((totalPay / estDist) * 100) / 100;
       const payPerMin = Math.round((totalPay / Math.max(1, estTime)) * 100) / 100;
 
-      const ordId = `ord_${Date.now().toString(36)}_${i}_${Math.floor(this.random() * 1000)}`;
+      const ordId = `ord_mty_${Date.now().toString(36)}_${i}_${Math.floor(this.random() * 1000)}`;
+
+      // Tight street-snapped curb jitter (±0.0008 deg ≈ 80 meters along the street)
+      const pLat = Number((restaurant.lat + (this.random() - 0.5) * 0.0016).toFixed(6));
+      const pLon = Number((restaurant.lon + (this.random() - 0.5) * 0.0016).toFixed(6));
+      const dLat = Number((dropoff.lat + (this.random() - 0.5) * 0.0016).toFixed(6));
+      const dLon = Number((dropoff.lon + (this.random() - 0.5) * 0.0016).toFixed(6));
 
       orders.push({
         order_id: ordId,
         id: ordId,
         platform: PLATFORMS[Math.floor(this.random() * PLATFORMS.length)],
         order_type: 'food',
+        restaurant_name: restaurant.name,
+        food_icon: restaurant.foodIcon,
+        ticket_mxn: restaurant.avgTicketMxn,
+        municipality: restaurant.municipality,
         food_type: foodType,
         prep_time_min: prepTimeMin,
         traffic_density: trafficDensity,
         tip,
         pickup: {
-          lat: Number((pickupZone.lat + (this.random() - 0.5) * 0.012).toFixed(5)),
-          lon: Number((pickupZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
-          lng: Number((pickupZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
-          zone: pickupZone.name,
+          lat: pLat,
+          lon: pLon,
+          lng: pLon,
+          zone: restaurant.corridor,
+          name: restaurant.name,
         },
         dropoff: {
-          lat: Number((dropoffZone.lat + (this.random() - 0.5) * 0.012).toFixed(5)),
-          lon: Number((dropoffZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
-          lng: Number((dropoffZone.lon + (this.random() - 0.5) * 0.012).toFixed(5)),
-          zone: dropoffZone.name,
+          lat: dLat,
+          lon: dLon,
+          lng: dLon,
+          zone: dropoff.sector,
+          name: dropoff.name,
         },
         base_pay: basePay,
         surge_multiplier: surgeMultiplier,

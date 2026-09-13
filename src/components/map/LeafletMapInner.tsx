@@ -4,7 +4,7 @@ import React, { useMemo, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { ShiftState } from '@/lib/types';
-import { MONTERREY_ZONES } from '@/lib/simulator/orderStream';
+import { REAL_MONTERREY_RESTAURANTS } from '@/lib/simulator/orderStream';
 
 function MapController() {
   const map = useMap();
@@ -103,6 +103,14 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
     []
   );
 
+  const createRestaurantIcon = (icon: string) =>
+    L.divIcon({
+      className: 'rest-pin',
+      html: `<div class="w-6 h-6 rounded-full bg-[#18181b] border border-[#3f3f46] text-xs flex items-center justify-center shadow-md hover:scale-125 transition-transform">${icon}</div>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+    });
+
   const iconPickup = useMemo(
     () =>
       L.divIcon({
@@ -145,13 +153,20 @@ export const LeafletMapInner: React.FC<LeafletMapInnerProps> = ({ shiftState }) 
         className="dark-tiles"
       />
 
-      {/* Static Monterrey Hotspot Hubs */}
-      {MONTERREY_ZONES.map((z) => (
-        <Marker key={z.name} position={[z.lat, z.lon]} icon={iconZone}>
+      {/* Verified Real Monterrey Restaurants */}
+      {REAL_MONTERREY_RESTAURANTS.map((rest) => (
+        <Marker key={rest.id} position={[rest.lat, rest.lon]} icon={createRestaurantIcon(rest.foodIcon)}>
           <Popup className="text-slate-900 text-xs">
-            <strong>{z.name}</strong>
-            <br />
-            Demand factor: {z.weight}x
+            <div className="font-bold text-slate-900 text-xs flex items-center gap-1">
+              <span>{rest.foodIcon}</span> {rest.name}
+            </div>
+            <div className="text-[10px] text-slate-500 mt-0.5">{rest.corridor} ({rest.municipality})</div>
+            <div className="text-[11px] text-emerald-700 font-semibold mt-1">
+              Ticket promedio: ${rest.avgTicketMxn} MXN
+            </div>
+            <div className="text-[10px] text-slate-600">
+              Cocina Kaggle: {rest.prepTimeRange[0]}-{rest.prepTimeRange[1]} min prep
+            </div>
           </Popup>
         </Marker>
       ))}
